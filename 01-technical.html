@@ -17,9 +17,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .nav-role{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#38BDF8;margin-bottom:2px}
 .nav-title{font-size:13px;font-weight:700;color:#F1F5F9;white-space:nowrap}
 .nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.devops-btn{display:flex;align-items:center;gap:7px;padding:6px 14px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);border-radius:8px;color:#FBBF24;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
-.devops-btn:hover,.devops-btn.active{background:rgba(251,191,36,.2);border-color:#FBBF24;box-shadow:0 0 16px rgba(251,191,36,.25)}
-.devops-btn .icon{font-size:14px}
+@keyframes devops-pulse{0%,100%{box-shadow:0 0 6px rgba(251,191,36,.22),0 0 0 0 rgba(251,191,36,.3)}50%{box-shadow:0 0 15px rgba(251,191,36,.55),0 0 0 5px rgba(251,191,36,.07)}}
+@keyframes spark{0%,68%,100%{transform:scale(1) rotate(0deg)}80%{transform:scale(1.38) rotate(-12deg)}92%{transform:scale(0.86) rotate(7deg)}}
+.devops-btn{display:flex;align-items:center;gap:7px;padding:6px 14px;background:rgba(251,191,36,.13);border:1px solid rgba(251,191,36,.42);border-radius:8px;color:#FBBF24;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s;white-space:nowrap;animation:devops-pulse 2.4s ease-in-out infinite}
+.devops-btn:hover{background:rgba(251,191,36,.24);border-color:#FBBF24;box-shadow:0 0 22px rgba(251,191,36,.38);animation:none}
+.devops-btn.active{background:rgba(251,191,36,.2);border-color:#FBBF24;box-shadow:0 0 18px rgba(251,191,36,.28);animation:none}
+.devops-btn .icon{font-size:14px;display:inline-block;animation:spark 3.6s ease-in-out infinite}
+.devops-btn.active .icon{animation:none}
 .nav-links{display:flex;gap:4px}
 .nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
 .nav-link:hover,.nav-link.active{color:#38BDF8;border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.08)}
@@ -541,6 +545,9 @@ function init(){
   for(const s of SECTIONS)drawStrip(s);
   eg=mk('g');ng=mk('g');dg=mk('g');
   svg.appendChild(eg);svg.appendChild(ng);svg.appendChild(dg);
+  eg.setAttribute('transform','translate(80,0)');
+  ng.setAttribute('transform','translate(80,0)');
+  dg.setAttribute('transform','translate(80,0)');
   EDGES.forEach(e=>drawEdge(e));
   NODES.forEach(n=>drawNode(n));
   EDGES.forEach(e=>addDots(e));
@@ -555,7 +562,7 @@ function drawStrip(s){
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:2,fill:s.strip,opacity:'0.7'}));
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
-  const t=mk('text',{x:1488,y:s.rowStart+s.rowH-8,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.1em','text-anchor':'end'});
+  const t=mk('text',{x:14,y:s.rowStart+s.rowH-8,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.1em','text-anchor':'start'});
   t.textContent=s.label;g.appendChild(t);
   g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
   svg.insertBefore(g,svg.firstChild);

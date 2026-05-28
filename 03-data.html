@@ -174,7 +174,7 @@ svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116p
   <div class="dp-body" id="dp-body"></div>
 </div>
 
-<svg id="diagram" viewBox="0 0 1500 830" preserveAspectRatio="xMidYMid meet">
+<svg id="diagram" viewBox="0 0 1560 830" preserveAspectRatio="xMidYMid meet">
 <defs>
   <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
     <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
@@ -324,9 +324,12 @@ function init(){
     defs.appendChild(g);
   }
   for(const s of SECTIONS)drawStrip(s);
-  drawGov();
   eg=mk('g');ng=mk('g');dg=mk('g');
   svg.appendChild(eg);svg.appendChild(ng);svg.appendChild(dg);
+  eg.setAttribute('transform','translate(80,0)');
+  ng.setAttribute('transform','translate(80,0)');
+  dg.setAttribute('transform','translate(80,0)');
+  drawGov();
   EDGES.forEach(e=>drawEdge(e));NODES.forEach(n=>drawNode(n));EDGES.forEach(e=>addDots(e));
   svg.addEventListener('click',()=>clearSel());
   document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel();});
@@ -339,7 +342,7 @@ function drawStrip(s){
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:2,fill:s.strip,opacity:'0.7'}));
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
-  const t=mk('text',{x:1488,y:s.rowStart+s.rowH-8,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.09em','text-anchor':'end'});
+  const t=mk('text',{x:14,y:s.rowStart+s.rowH-8,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.09em','text-anchor':'start'});
   t.textContent=s.label;g.appendChild(t);
   g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
   svg.insertBefore(g,svg.firstChild);
@@ -351,7 +354,7 @@ function drawGov(){
   g.appendChild(mk('rect',{x,y,width:w,height:h,rx:10,fill:'rgba(220,38,38,.04)',stroke:'rgba(220,38,38,.18)','stroke-width':'1','stroke-dasharray':'5,3'}));
   const t=mk('text',{x:x+10,y:y+13,fill:'rgba(252,165,165,.7)','font-size':'8.5','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.08em'});
   t.textContent='GOVERNANCE & COMPLIANCE';g.appendChild(t);
-  svg.insertBefore(g,svg.firstChild);
+  ng.insertBefore(g,ng.firstChild);
 }
 
 function gn(id){return NODES.find(n=>n.id===id);}
