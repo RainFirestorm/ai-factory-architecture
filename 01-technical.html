@@ -105,7 +105,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 /* ── DEVOPS PANEL ── */
 .devops-panel{
   position:fixed;bottom:-100%;left:0;right:0;z-index:300;
-  height:420px;
+  height:520px;
   background:rgba(4,7,12,.97);
   border-top:2px solid rgba(251,191,36,.4);
   backdrop-filter:blur(20px);
@@ -553,9 +553,9 @@ function init(){
 function drawStrip(s){
   const g=mk('g');
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
-  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:20,fill:s.strip}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:2,fill:s.strip,opacity:'0.7'}));
   g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
-  const t=mk('text',{x:14,y:s.rowStart+14,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.1em'});
+  const t=mk('text',{x:1488,y:s.rowStart+s.rowH-8,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.1em','text-anchor':'end'});
   t.textContent=s.label;g.appendChild(t);
   g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
   svg.insertBefore(g,svg.firstChild);
