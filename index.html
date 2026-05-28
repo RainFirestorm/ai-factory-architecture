@@ -12,6 +12,9 @@ body {
   min-height: 100vh;
   color: #E2E8F0;
   overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 body::before {
   content: '';
@@ -24,87 +27,222 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
-.page { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 64px 32px 80px; }
 
-/* ── HEADER ── */
+.page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 72px 32px 80px;
+  text-align: center;
+  max-width: 680px;
+  width: 100%;
+}
+
+/* ── BADGE ── */
 .badge {
   display: inline-flex; align-items: center; gap: 8px;
   background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.35);
   border-radius: 100px; padding: 6px 18px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  color: #A5B4FC; margin-bottom: 30px;
+  color: #A5B4FC; margin-bottom: 44px;
 }
 .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #6366F1; animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.6} }
 
+/* ── TITLE ── */
 h1 {
-  font-size: clamp(38px, 5vw, 60px); font-weight: 800; text-align: center;
-  line-height: 1.08; margin-bottom: 18px;
+  font-size: clamp(44px, 6.5vw, 76px);
+  font-weight: 800;
+  line-height: 1.04;
+  margin-bottom: 28px;
   background: linear-gradient(135deg, #E0F2FE 0%, #A5B4FC 45%, #F9A8D4 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-}
-.subtitle {
-  font-size: 17px; color: #94A3B8; text-align: center;
-  max-width: 600px; line-height: 1.7; margin-bottom: 60px;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
 }
 
-/* ── CARDS ── */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
-  gap: 22px; width: 100%; max-width: 1120px;
+/* ── DIVIDER ── */
+.divider {
+  width: 64px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(165,180,252,0.5), transparent);
+  margin: 0 auto 40px;
 }
-.card {
+
+/* ── OUTLOOK MESSAGE ── */
+.outlook-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6366F1;
+  margin-bottom: 14px;
+}
+.outlook {
+  font-size: 17px;
+  line-height: 1.85;
+  color: #94A3B8;
+  margin-bottom: 16px;
+  max-width: 520px;
+}
+.outlook em {
+  color: #C4B5FD;
+  font-style: normal;
+  font-weight: 500;
+}
+.outlook-sig {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: rgba(165,180,252,0.45);
+  margin-bottom: 52px;
+  font-style: italic;
+}
+
+/* ── EXPLORE WRAPPER ── */
+.explore-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 56px;
+}
+
+/* ── CTA BUTTON ── */
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18));
+  border: 1px solid rgba(139,92,246,0.42);
+  border-radius: 14px;
+  padding: 17px 38px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #C4B5FD;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  letter-spacing: 0.02em;
+  outline: none;
   position: relative;
-  background: rgba(10, 16, 36, 0.85);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 22px; padding: 36px;
-  cursor: pointer; transition: transform .25s, box-shadow .25s, border-color .25s;
-  text-decoration: none; color: inherit; overflow: hidden;
-  backdrop-filter: blur(12px);
+  z-index: 1;
 }
-.card::before {
-  content: ''; position: absolute; inset: 0; border-radius: 22px;
-  background: var(--glow); opacity: 0; transition: opacity .3s; pointer-events: none;
+.cta-btn:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,0.32), rgba(139,92,246,0.32));
+  border-color: rgba(139,92,246,0.68);
+  transform: translateY(-2px);
+  box-shadow: 0 22px 44px -12px rgba(99,102,241,0.3);
 }
-.card:hover { transform: translateY(-7px); border-color: var(--accent); box-shadow: 0 28px 56px -14px var(--shadow); }
-.card:hover::before { opacity: 1; }
+.cta-arrow {
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  display: inline-block;
+  font-size: 18px;
+}
+.cta-btn.open .cta-arrow { transform: rotate(90deg); }
 
-.card-top { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
-.card-icon {
-  width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
-  background: var(--glow); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center; font-size: 26px;
+/* ── NAV REVEAL ── */
+.nav-reveal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  position: relative;
+  z-index: 0;
+  margin-top: 0;
+  transition: max-height 0.55s cubic-bezier(0.16,1,0.3,1),
+              opacity 0.4s ease,
+              margin-top 0.35s ease,
+              margin-bottom 0.35s ease;
+  margin-bottom: 0;
 }
-.card-role { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
-.card-title { font-size: 21px; font-weight: 700; color: #F1F5F9; }
-.card-desc { font-size: 14px; color: #94A3B8; line-height: 1.75; margin-bottom: 24px; }
-.card-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 28px; }
-.tag {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 6px; padding: 4px 10px; font-size: 11px; color: #94A3B8;
+.nav-reveal.open {
+  max-height: 300px;
+  opacity: 1;
+  margin-top: 28px;
+  margin-bottom: 56px;
 }
-.card-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+  text-align: left;
 }
-.cta { font-size: 14px; font-weight: 600; color: var(--accent); }
-.arrow {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: var(--glow); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 17px; transition: transform .2s;
+.nav-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -8px var(--shadow);
 }
-.card:hover .arrow { transform: translateX(5px); }
+.nav-icon { font-size: 20px; flex-shrink: 0; }
+.nav-role {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 3px;
+}
+.nav-label { font-size: 12.5px; font-weight: 600; color: #E2E8F0; }
+
+/* ── FOOTER ── */
+.footer { color: #475569; font-size: 13px; line-height: 1.8; }
+.footer strong { color: #64748B; }
 
 /* ── PARTICLES ── */
 .particles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
 .particle { position: absolute; border-radius: 50%; animation: float linear infinite; }
-@keyframes float { 0%{transform:translateY(110vh) scale(0);opacity:0} 8%{opacity:.5} 92%{opacity:.5} 100%{transform:translateY(-60px) scale(1);opacity:0} }
+@keyframes float {
+  0%   { transform: translateY(110vh) scale(0); opacity: 0; }
+  8%   { opacity: .5; }
+  92%  { opacity: .5; }
+  100% { transform: translateY(-60px) scale(1); opacity: 0; }
+}
 
-/* ── FOOTER ── */
-.footer { margin-top: 64px; text-align: center; color: #475569; font-size: 13px; line-height: 1.8; }
-.footer strong { color: #64748B; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  body { align-items: flex-start; }
+
+  .page { padding: 48px 20px 56px; }
+
+  .badge { margin-bottom: 28px; font-size: 10px; padding: 5px 14px; }
+
+  h1 { font-size: clamp(36px, 11vw, 52px); margin-bottom: 20px; }
+
+  .divider { margin-bottom: 28px; }
+
+  .outlook { font-size: 15px; line-height: 1.75; }
+  .outlook-sig { margin-bottom: 36px; }
+
+  .cta-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 15px 24px;
+  }
+
+  .nav-reveal {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+  .nav-reveal.open { max-height: 420px; }
+
+  .nav-item { padding: 13px 14px; }
+}
+
+/* ── TOUCH — disable hover lifts on tap devices ── */
+@media (hover: none) {
+  .cta-btn:hover  { transform: none; box-shadow: none; }
+  .nav-item:hover { transform: none; box-shadow: none; }
+}
+.cta-btn:active  { transform: scale(0.97) !important; }
+.nav-item:active { transform: scale(0.97) !important; opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -112,85 +250,77 @@ h1 {
 <div class="particles" id="particles"></div>
 
 <div class="page">
+
   <div class="badge"><div class="badge-dot"></div>Diagram-as-Code Repository</div>
 
-  <h1>AI Factory<br>Architecture Diagrams</h1>
-  <p class="subtitle">
-    Production-grade animated architecture diagrams for the Claude Orchestrator + Databricks +
-    Agentic Systems platform. Four views structured for each Chief Architect role.
+  <h1>AI Factory<br>Architecture</h1>
+
+  <div class="divider"></div>
+
+  <div class="outlook-label">Architectural Outlook</div>
+
+  <p class="outlook">
+    Great systems are not built for today's requirements —<br>
+    they are built for the <em>pressures they haven't yet faced.</em><br><br>
+    This blueprint reflects a platform engineered to scale, adapt,
+    and endure as the intelligence layer of your enterprise evolves.
+    Every decision documented. Every trade-off reasoned.
+    Every component purposeful.
   </p>
 
-  <div class="cards">
+  <p class="outlook-sig">— Designed to last.</p>
 
-    <a href="01-technical.html" class="card"
-       style="--accent:#38BDF8;--glow:linear-gradient(135deg,rgba(56,189,248,.12),rgba(14,165,233,.04));--border:rgba(56,189,248,.28);--shadow:rgba(56,189,248,.22)">
-      <div class="card-top">
-        <div class="card-icon">⚙️</div>
-        <div><div class="card-role">Chief Technology Officer</div><div class="card-title">Technical Architecture</div></div>
+  <div class="explore-wrap">
+  <button class="cta-btn" onclick="toggleNav(this)">
+    Architectural Exploration
+    <span class="cta-arrow">→</span>
+  </button>
+
+  <div class="nav-reveal" id="nav">
+    <a href="01-technical.html" class="nav-item" style="--accent:#38BDF8;--shadow:rgba(56,189,248,.2)">
+      <span class="nav-icon">⚙️</span>
+      <div>
+        <div class="nav-role">CTO View</div>
+        <div class="nav-label">Technical Architecture</div>
       </div>
-      <p class="card-desc">Multi-region Kubernetes deployment across US-East / US-West with 3 availability zones, auto-scaling infrastructure, high-availability and disaster recovery topology.</p>
-      <div class="card-tags">
-        <span class="tag">Kubernetes</span><span class="tag">Multi-AZ HA/DR</span>
-        <span class="tag">Databricks</span><span class="tag">CDN + WAF</span>
-        <span class="tag">Auto-Scale 3–20 Pods</span><span class="tag">Vault Secrets</span>
-      </div>
-      <div class="card-footer"><span class="cta">View Infrastructure Diagram</span><div class="arrow">→</div></div>
     </a>
-
-    <a href="02-application.html" class="card"
-       style="--accent:#C084FC;--glow:linear-gradient(135deg,rgba(192,132,252,.12),rgba(168,85,247,.04));--border:rgba(192,132,252,.28);--shadow:rgba(192,132,252,.22)">
-      <div class="card-top">
-        <div class="card-icon">🔗</div>
-        <div><div class="card-role">Chief Application Architect</div><div class="card-title">Application Architecture</div></div>
+    <a href="02-application.html" class="nav-item" style="--accent:#C084FC;--shadow:rgba(192,132,252,.2)">
+      <span class="nav-icon">🔗</span>
+      <div>
+        <div class="nav-role">Application Architect</div>
+        <div class="nav-label">Application Architecture</div>
       </div>
-      <p class="card-desc">Claude Orchestrator coordinating multi-agent systems via tool invocation, feedback loops, and parallel agent patterns across Parse → Plan → Dispatch → Execute → Respond.</p>
-      <div class="card-tags">
-        <span class="tag">Claude Orchestrator</span><span class="tag">Multi-Agent</span>
-        <span class="tag">Tool Use</span><span class="tag">Feedback Loops</span>
-        <span class="tag">REST / gRPC</span><span class="tag">DAG Execution</span>
-      </div>
-      <div class="card-footer"><span class="cta">View Application Diagram</span><div class="arrow">→</div></div>
     </a>
-
-    <a href="03-data.html" class="card"
-       style="--accent:#34D399;--glow:linear-gradient(135deg,rgba(52,211,153,.12),rgba(16,185,129,.04));--border:rgba(52,211,153,.28);--shadow:rgba(52,211,153,.22)">
-      <div class="card-top">
-        <div class="card-icon">🗄️</div>
-        <div><div class="card-role">Chief Data Officer</div><div class="card-title">Data Architecture</div></div>
+    <a href="03-data.html" class="nav-item" style="--accent:#34D399;--shadow:rgba(52,211,153,.2)">
+      <span class="nav-icon">🗄️</span>
+      <div>
+        <div class="nav-role">CDO View</div>
+        <div class="nav-label">Data Architecture</div>
       </div>
-      <p class="card-desc">End-to-end pipeline from raw ingestion through Delta Lake medallion architecture to Feature Store, MLflow model registry, and vector-powered semantic search.</p>
-      <div class="card-tags">
-        <span class="tag">Delta Lake Medallion</span><span class="tag">Feature Store</span>
-        <span class="tag">MLflow Registry</span><span class="tag">Vector DB / FAISS</span>
-        <span class="tag">Data Lineage</span><span class="tag">DLP / Governance</span>
-      </div>
-      <div class="card-footer"><span class="cta">View Data Pipeline Diagram</span><div class="arrow">→</div></div>
     </a>
-
-    <a href="04-business.html" class="card"
-       style="--accent:#FBBF24;--glow:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.04));--border:rgba(251,191,36,.28);--shadow:rgba(251,191,36,.22)">
-      <div class="card-top">
-        <div class="card-icon">📈</div>
-        <div><div class="card-role">Chief Business Architect</div><div class="card-title">Business Architecture</div></div>
+    <a href="04-business.html" class="nav-item" style="--accent:#FBBF24;--shadow:rgba(251,191,36,.2)">
+      <span class="nav-icon">📈</span>
+      <div>
+        <div class="nav-role">Business Architect</div>
+        <div class="nav-label">Business Architecture</div>
       </div>
-      <p class="card-desc">Business capabilities, value streams, and outcome mapping for the AI Factory. KPIs, ROI metrics, cost model, and use-case patterns for executive stakeholders.</p>
-      <div class="card-tags">
-        <span class="tag">Value Streams</span><span class="tag">Business Capabilities</span>
-        <span class="tag">KPIs &amp; ROI</span><span class="tag">Use Cases</span>
-        <span class="tag">Cost Model</span><span class="tag">Outcomes</span>
-      </div>
-      <div class="card-footer"><span class="cta">View Business Diagram</span><div class="arrow">→</div></div>
     </a>
-
   </div>
+  </div><!-- /explore-wrap -->
 
   <div class="footer">
-    <strong>AI Factory</strong> · Claude Orchestrator + Databricks + Multi-Agent Systems + Kubernetes<br>
-    Diagram-as-Code Repository · 4 Architecture Views · Animated SVG Data Flows
+    <strong>AI Factory</strong> · Claude Orchestrator + Databricks + Multi-Agent Systems<br>
+    Four Architecture Views &nbsp;·&nbsp; AWS &nbsp;·&nbsp; GCP &nbsp;·&nbsp; Azure
   </div>
+
 </div>
 
 <script>
+function toggleNav(btn) {
+  btn.classList.toggle('open');
+  document.getElementById('nav').classList.toggle('open');
+}
+
 const pc = document.getElementById('particles');
 const cols = ['#38BDF8','#C084FC','#34D399','#FBBF24','#F87171','#818CF8'];
 for (let i = 0; i < 30; i++) {

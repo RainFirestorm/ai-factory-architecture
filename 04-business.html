@@ -20,6 +20,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .nav-links{display:flex;gap:4px}
 .nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
 .nav-link:hover,.nav-link.active{color:#FBBF24;border-color:rgba(251,191,36,.28);background:rgba(251,191,36,.08)}
+.cloud-toggle{display:flex;gap:3px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:3px}
+.cloud-btn{padding:4px 11px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.04em;background:transparent;color:#475569;transition:all .22s;white-space:nowrap}
+.cloud-btn:hover{color:#94A3B8}
+.cloud-btn[data-cloud="aws"].active{background:linear-gradient(135deg,#FF9900,#e07b00);color:#fff;box-shadow:0 2px 10px rgba(255,153,0,.35)}
+.cloud-btn[data-cloud="gcp"].active{background:linear-gradient(135deg,#4285F4,#1a6bd4);color:#fff;box-shadow:0 2px 10px rgba(66,133,244,.35)}
+.cloud-btn[data-cloud="azure"].active{background:linear-gradient(135deg,#0078D4,#005fa8);color:#fff;box-shadow:0 2px 10px rgba(0,120,212,.35)}
 
 /* ── LEGEND BAR ── */
 .legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(12,9,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
@@ -117,6 +123,12 @@ svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116p
     </div>
   </div>
   <div class="nav-right">
+    <div class="cloud-toggle">
+      <button class="cloud-btn active" data-cloud="aws"   onclick="switchCloud('aws')">AWS</button>
+      <button class="cloud-btn"        data-cloud="gcp"   onclick="switchCloud('gcp')">GCP</button>
+      <button class="cloud-btn"        data-cloud="azure" onclick="switchCloud('azure')">Azure</button>
+    </div>
+    <div class="vdiv"></div>
     <div class="nav-links">
       <a href="01-technical.html"   class="nav-link">⚙ Technical</a>
       <a href="02-application.html" class="nav-link">🔗 Application</a>
@@ -430,8 +442,10 @@ function clearSel(){
 
 function showDp(id){
   const n=NODES.find(n=>n.id===id);
-  const d=NODE_DETAILS[id];
-  if(!n||!d)return;
+  const base=NODE_DETAILS[id];
+  if(!n||!base)return;
+  const cloudOv=(CLOUD_NODE_DETAILS[_cloud]||{})[id]||{};
+  const d=Object.assign({},base,cloudOv);
   document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
   document.getElementById('dp-role').textContent=d.role;
   document.getElementById('dp-name').textContent=n.label;
@@ -487,6 +501,61 @@ function filterNav(){
     const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
     btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
   });
+}
+
+/* ── CLOUD PROVIDER TOGGLE ── */
+const CLOUD_LABELS={
+  aws:{
+    delta: {label:'Delta Lake',       sub:'S3 · 30 TB · ACID'},
+    kafka: {label:'Amazon MSK',       sub:'Real-time Events · 100K msg/s'},
+    claude:{label:'Claude Orchestrator',sub:'Amazon Bedrock · Planning · Tool Use · DAG'},
+    rag:   {label:'Search / RAG',     sub:'OpenSearch · Semantic · FAISS'},
+    fstore:{label:'Feature Store',    sub:'SageMaker FS · Online + Offline'},
+  },
+  gcp:{
+    delta: {label:'Delta Lake',       sub:'GCS · 30 TB · ACID'},
+    kafka: {label:'Pub/Sub',          sub:'Real-time Events · 100K msg/s'},
+    claude:{label:'Claude Orchestrator',sub:'Vertex AI · Planning · Tool Use · DAG'},
+    rag:   {label:'Search / RAG',     sub:'Vertex Matching · Semantic · ANN'},
+    fstore:{label:'Feature Store',    sub:'Vertex FS · Online + Offline'},
+  },
+  azure:{
+    delta: {label:'Delta Lake',       sub:'ADLS · 30 TB · ACID'},
+    kafka: {label:'Event Hubs',       sub:'Real-time Events · 100K msg/s'},
+    claude:{label:'Claude Orchestrator',sub:'Azure OpenAI · Planning · Tool Use · DAG'},
+    rag:   {label:'Search / RAG',     sub:'Azure AI Search · Semantic · Vector'},
+    fstore:{label:'Feature Store',    sub:'Azure ML FS · Online + Offline'},
+  }
+};
+const CLOUD_NODE_DETAILS={
+  aws:{},
+  gcp:{
+    delta:{role:'Data Platform — Delta Lake on GCS (30 TB)',purpose:'Foundation of the GCP data platform. Delta Lake on GCS provides ACID transactions, time travel (30-day history), schema evolution, and unified batch + streaming on 30 TB of business data. Three-tier medallion: Bronze (raw on GCS), Silver (validated), Gold (aggregates). Single source of truth for all AI model training.',tech:['Delta Lake 3.x on GCS','Medallion architecture (Bronze/Silver/Gold)','Z-ORDER + liquid clustering','30 TB at low cost (GCS Standard)'],sla:[{val:'30 TB',lbl:'Total managed data volume'},{val:'30 days',lbl:'Time travel history depth'}],pattern:'Medallion architecture: data quality increases at each tier. Bronze = raw (immutable on GCS); Silver = validated (correctable); Gold = business-aligned. Data never deleted from Bronze; corrections applied in Silver.',risk:'Storage cost growing with data volume — mitigated by GCS Object Lifecycle policies (Nearline after 1 year, 10x cheaper); columnar Parquet compression provides 5-8x savings vs row-based.'},
+    kafka:{role:'Data Platform — GCP Pub/Sub Streaming',purpose:'GCP Pub/Sub real-time event backbone connecting all business systems. 100K+ events/second throughput with sub-10ms latency. Provides the streaming data that powers real-time fraud detection, live recommendations, and operational monitoring. Decouples event producers from consumers — new consumers subscribe without impacting producers.',tech:['GCP Pub/Sub (fully managed)','Schema Registry (Protobuf + Avro)','Multi-region message replication','KEDA autoscaling on subscription lag'],sla:[{val:'100K+',lbl:'Events/second throughput'},{val:'<10ms',lbl:'Event delivery P99'}],pattern:'Event-driven architecture: business events emitted to Pub/Sub enable any system to react to changes without point-to-point integration. New capabilities subscribe to existing topics without producer coordination.',risk:'Pub/Sub subscription backlog during traffic spikes — mitigated by KEDA autoscaling (consumer pods scale on backlog); priority subscriptions for time-sensitive fraud events; dead-letter topics for failed processing.'},
+    claude:{role:'AI Engine — Claude on Vertex AI',purpose:'The cognitive core of the AI Factory. Claude claude-opus-4 via Vertex AI (Anthropic on Google Cloud) reasons about business context, generates multi-step DAG execution plans, invokes specialized tools, and synthesizes results into coherent business outcomes. Operates as the "chief of staff" coordinating all AI capabilities toward business objectives.',tech:['Claude claude-opus-4 via Vertex AI','Structured JSON DAG output','Tool use (12 defined tools)','ReAct reasoning pattern'],sla:[{val:'<2s',lbl:'Complex plan generation P99'},{val:'>95%',lbl:'Plan success rate (no retry)'}],pattern:'ReAct (Reason + Act) on GCP: Claude reasons step-by-step, generating an internal monologue before committing to any action. All reasoning traces logged to Cloud Logging for explainability and audit.',risk:'Claude API latency/availability impacting business SLA — mitigated by simplified fallback plan generation (rules-based) when API degrades; circuit breaker with 30s half-open window; graceful degradation over hard failure.'},
+    rag:{role:'AI Engine — Vertex AI Search & RAG',purpose:'Semantic search and RAG via Vertex AI Vector Search provides Claude with accurate, up-to-date business context from knowledge base, product catalog, and policy documents. Hybrid retrieval (vector + BM25) achieves >90% precision@10. Retrieved context grounds responses in facts, reducing hallucination rate by 78%.',tech:['Vertex AI Vector Search (ScaNN)','Elasticsearch BM25 (lexical)','Cross-encoder reranking','Reciprocal rank fusion'],sla:[{val:'<100ms',lbl:'Hybrid search P99'},{val:'>90%',lbl:'Precision@10 (relevance)'}],pattern:'Retrieve-then-read: retrieval separates factual grounding from generation. Claude reads retrieved chunks with clear boundary markers between retrieved facts and its own reasoning.',risk:'RAG context staleness causing outdated responses — mitigated by document freshness metadata; Claude instructed to flag outdated context; nightly incremental Vertex AI index rebuild from GCS.'},
+    fstore:{role:'Data Platform — Vertex AI Feature Store',purpose:'Vertex AI Feature Store eliminates the #1 cause of ML failures: training-serving skew. Shares identical feature computations for model training (offline batch on BigQuery) and production inference (online real-time via Bigtable). Bigtable delivers <10ms P99 for online serving. Manages 200+ business features across 15 feature groups.',tech:['Vertex AI Feature Store','Bigtable online serving (<10ms P99)','BigQuery offline training store','Point-in-time joins for training'],sla:[{val:'<10ms',lbl:'Online feature lookup P99'},{val:'200+',lbl:'Managed business features'}],pattern:'Single source of truth for features: one feature definition serves both training and inference. Feature versioning with backward-compatible contracts prevents downstream model breakage on feature updates.',risk:'Feature drift causing silent model degradation — mitigated by statistical drift monitoring (PSI per feature group); freshness SLA with automated alerts; model confidence tied to feature freshness.'},
+  },
+  azure:{
+    delta:{role:'Data Platform — Delta Lake on ADLS Gen2 (30 TB)',purpose:'Foundation of the Azure data platform. Delta Lake on ADLS Gen2 provides ACID transactions, time travel (30-day history), schema evolution, and unified batch + streaming on 30 TB of business data. Three-tier medallion: Bronze (raw on ADLS), Silver (validated), Gold (aggregates). Single source of truth for all AI model training.',tech:['Delta Lake 3.x on ADLS Gen2','Medallion architecture (Bronze/Silver/Gold)','Z-ORDER + liquid clustering','30 TB at low cost (ADLS Cool tier)'],sla:[{val:'30 TB',lbl:'Total managed data volume'},{val:'30 days',lbl:'Time travel history depth'}],pattern:'Medallion architecture: data quality increases at each tier. Bronze = raw (immutable on ADLS); Silver = validated; Gold = business-aligned. Data never deleted from Bronze; corrections applied in Silver.',risk:'Storage cost growth — mitigated by ADLS lifecycle management (Cool/Archive tiers after 1 year, 10x cheaper); Parquet columnar compression provides 5-8x savings vs row-based.'},
+    kafka:{role:'Data Platform — Azure Event Hubs Streaming',purpose:'Azure Event Hubs real-time event backbone connecting all business systems. 100K+ events/second with sub-10ms latency. Kafka-protocol compatible for drop-in replacement. Provides streaming data for real-time fraud detection, live recommendations, and operational monitoring. Decouples event producers from consumers.',tech:['Azure Event Hubs (Kafka-compatible)','Schema Registry (Avro contracts)','Geo-redundant namespace replication','KEDA autoscaling on consumer lag'],sla:[{val:'100K+',lbl:'Events/second throughput'},{val:'<10ms',lbl:'Event delivery P99'}],pattern:'Event-driven architecture: business events emitted to Event Hubs enable any system to react without point-to-point integration. Kafka-protocol compatibility enables new consumers without producer coordination.',risk:'Consumer lag accumulation during traffic spikes — mitigated by KEDA autoscaling on lag metric; geo-redundant namespace ensures availability; dead-letter entity for failed processing.'},
+    claude:{role:'AI Engine — Claude on Azure AI',purpose:'The cognitive core of the AI Factory. Claude claude-opus-4 via Azure AI (Anthropic on Azure) reasons about business context, generates multi-step DAG execution plans, invokes specialized tools, and synthesizes results into coherent business outcomes. Operates as the "chief of staff" coordinating all AI capabilities toward business objectives.',tech:['Claude claude-opus-4 via Azure AI','Structured JSON DAG output','Tool use (12 defined tools)','ReAct reasoning pattern'],sla:[{val:'<2s',lbl:'Complex plan generation P99'},{val:'>95%',lbl:'Plan success rate (no retry)'}],pattern:'ReAct (Reason + Act) on Azure: Claude reasons step-by-step with full audit trail logged to Azure Monitor. Business decisions fully auditable via Log Analytics for compliance requirements.',risk:'Claude API latency/availability impacting business SLA — mitigated by simplified fallback plan generation (rules-based) when API degrades; circuit breaker with 30s half-open window; graceful degradation over hard failure.'},
+    rag:{role:'AI Engine — Azure AI Search & RAG',purpose:'Semantic search and RAG via Azure AI Search provides Claude with accurate, up-to-date business context. Native hybrid retrieval (vector + BM25) achieves >90% precision@10. Semantic ranker reranks top-K results for precision. Retrieved context grounds responses in facts, reducing hallucination rate by 78%.',tech:['Azure AI Search (vector + BM25 hybrid)','ADLS Gen2 indexer','Semantic ranker (reranking)','HNSW vector index'],sla:[{val:'<100ms',lbl:'Hybrid search P99'},{val:'>90%',lbl:'Precision@10 (relevance)'}],pattern:'Retrieve-then-read: retrieval separates factual grounding from generation. Claude reads retrieved chunks with clear boundary markers between retrieved facts and its own reasoning.',risk:'RAG context staleness causing outdated responses — mitigated by document freshness metadata in Azure AI Search; Claude instructed to flag outdated context; nightly ADLS Gen2 indexer refresh.'},
+    fstore:{role:'Data Platform — Azure ML Feature Store',purpose:'Azure ML Feature Store eliminates the #1 cause of ML failures: training-serving skew. Shares identical feature computations for model training (offline on ADLS Gen2) and production inference (online via Azure Cache for Redis, <10ms P99). Manages 200+ business features across 15 feature groups with versioning and lineage.',tech:['Azure ML Feature Store','Azure Cache for Redis online (<10ms P99)','ADLS Gen2 offline training store','Point-in-time joins for training'],sla:[{val:'<10ms',lbl:'Online feature lookup P99'},{val:'200+',lbl:'Managed business features'}],pattern:'Single source of truth for features: one feature definition serves both training and inference. Versioning with backward-compatible contracts prevents downstream model breakage on feature updates.',risk:'Feature drift causing silent model degradation — mitigated by Azure Monitor drift alerts (PSI per feature group); freshness SLA alerts; model confidence tied to feature freshness.'},
+  }
+};
+let _cloud='aws';
+function switchCloud(p){
+  if(p===_cloud)return;_cloud=p;
+  document.querySelectorAll('.cloud-btn').forEach(b=>b.classList.toggle('active',b.dataset.cloud===p));
+  const ov=CLOUD_LABELS[p]||{};
+  Object.entries(ov).forEach(([id,{label,sub}])=>{
+    const n=NODES.find(n=>n.id===id);if(n){n.label=label;n.sub=sub;}
+    const g=document.querySelector(`[data-node-id="${id}"]`);
+    if(g){const t=g.querySelectorAll('text');if(t[0])t[0].textContent=label;if(t[1])t[1].textContent=sub;}
+    const nb=document.querySelector(`.nnb[data-nav-id="${id}"] .nn-name`);if(nb)nb.textContent=label;
+  });
+  if(_sel)showDp(_sel);
 }
 
 init();

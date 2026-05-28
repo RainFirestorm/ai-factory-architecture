@@ -18,6 +18,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .nav-links{display:flex;gap:4px}
 .nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
 .nav-link:hover,.nav-link.active{color:#C084FC;border-color:rgba(192,132,252,.28);background:rgba(192,132,252,.08)}
+.cloud-toggle{display:flex;gap:3px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:3px}
+.cloud-btn{padding:4px 11px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.04em;background:transparent;color:#475569;transition:all .22s;white-space:nowrap}
+.cloud-btn:hover{color:#94A3B8}
+.cloud-btn[data-cloud="aws"].active{background:linear-gradient(135deg,#FF9900,#e07b00);color:#fff;box-shadow:0 2px 10px rgba(255,153,0,.35)}
+.cloud-btn[data-cloud="gcp"].active{background:linear-gradient(135deg,#4285F4,#1a6bd4);color:#fff;box-shadow:0 2px 10px rgba(66,133,244,.35)}
+.cloud-btn[data-cloud="azure"].active{background:linear-gradient(135deg,#0078D4,#005fa8);color:#fff;box-shadow:0 2px 10px rgba(0,120,212,.35)}
 
 .legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(8,6,16,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
 .leg-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#64748B;white-space:nowrap}
@@ -112,6 +118,12 @@ svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116p
     </div>
   </div>
   <div class="nav-right">
+    <div class="cloud-toggle">
+      <button class="cloud-btn active" data-cloud="aws"   onclick="switchCloud('aws')">AWS</button>
+      <button class="cloud-btn"        data-cloud="gcp"   onclick="switchCloud('gcp')">GCP</button>
+      <button class="cloud-btn"        data-cloud="azure" onclick="switchCloud('azure')">Azure</button>
+    </div>
+    <div class="vdiv"></div>
     <div class="nav-links">
       <a href="01-technical.html"   class="nav-link">⚙ Technical</a>
       <a href="02-application.html" class="nav-link active">🔗 Application</a>
@@ -404,8 +416,10 @@ function clearSel(){
 
 function showDp(id){
   const n=NODES.find(n=>n.id===id);
-  const d=NODE_DETAILS[id];
-  if(!n||!d)return;
+  const base=NODE_DETAILS[id];
+  if(!n||!base)return;
+  const cloudOv=(CLOUD_NODE_DETAILS[_cloud]||{})[id]||{};
+  const d=Object.assign({},base,cloudOv);
   document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
   document.getElementById('dp-role').textContent=d.role;
   document.getElementById('dp-name').textContent=n.label;
@@ -461,6 +475,71 @@ function filterNav(){
     const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
     btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
   });
+}
+
+/* ── CLOUD PROVIDER TOGGLE ── */
+const CLOUD_LABELS={
+  aws:{
+    queue: {label:'Result Queue',    sub:'Amazon SQS · Event Stream'},
+    cache: {label:'Cache / Redis',   sub:'ElastiCache · In-Memory'},
+    state: {label:'State Store',     sub:'DynamoDB · Distributed KV'},
+    dbsql: {label:'Databricks SQL',  sub:'AWS · Query Engine · C2D'},
+    spark: {label:'Spark Cluster',   sub:'AWS EMR · Feature Eng.'},
+    fstore:{label:'Feature Store',   sub:'SageMaker FS · Serving'},
+    mlreg: {label:'MLflow Registry', sub:'AWS S3-backed · Versioning'},
+  },
+  gcp:{
+    queue: {label:'Result Queue',    sub:'Pub/Sub · Event Stream'},
+    cache: {label:'Cache / Redis',   sub:'Memorystore · In-Memory'},
+    state: {label:'State Store',     sub:'Firestore · Distributed KV'},
+    dbsql: {label:'Databricks SQL',  sub:'GCP · BigQuery · C2D'},
+    spark: {label:'Dataproc Cluster',sub:'GCP Spark · Feature Eng.'},
+    fstore:{label:'Feature Store',   sub:'Vertex FS · Serving'},
+    mlreg: {label:'MLflow Registry', sub:'GCS-backed · Versioning'},
+  },
+  azure:{
+    queue: {label:'Result Queue',    sub:'Service Bus · Event Stream'},
+    cache: {label:'Cache / Redis',   sub:'Azure Cache · In-Memory'},
+    state: {label:'State Store',     sub:'Cosmos DB · Distributed KV'},
+    dbsql: {label:'Databricks SQL',  sub:'Azure · Synapse · C2D'},
+    spark: {label:'HDInsight Spark', sub:'Azure Spark · Feature Eng.'},
+    fstore:{label:'Feature Store',   sub:'Azure ML FS · Serving'},
+    mlreg: {label:'MLflow Registry', sub:'ADLS-backed · Versioning'},
+  }
+};
+const CLOUD_NODE_DETAILS={
+  aws:{},
+  gcp:{
+    queue:{role:'Async Result Bus — GCP Pub/Sub',purpose:'GCP Pub/Sub result queue decouples computation completion from response delivery. Enables streaming partial results to clients before full workflow completes. Provides durable message retention for audit and replay. Consumer groups allow independent scaling of result processors for different downstream consumers.',tech:['GCP Pub/Sub (fully managed)','Compacted topics (latest state)','Dataflow streaming (aggregation)','Schema Registry (Protobuf/Avro)'],sla:[{val:'<10ms',lbl:'Result publish latency'},{val:'At-least-once',lbl:'Delivery guarantee'}],pattern:'Event sourcing for result history: all intermediate and final results persisted. Consumer replay enables full workflow reconstruction for debugging. Compacted topics maintain latest state per workflow ID.',risk:'Consumer subscription backlog accumulation — mitigated by KEDA-based autoscaling on backlog depth; priority subscriptions for time-sensitive result delivery; dead-letter topics for failed processing.'},
+    cache:{role:'Hot Data Cache — GCP Memorystore',purpose:'GCP Memorystore for Redis 7 serves as the low-latency data layer: ML features (<1ms), session state, rate limit counters, and in-flight workflow state. LRU eviction manages memory under pressure. AOF persistence prevents data loss on Memorystore restart.',tech:['GCP Memorystore for Redis 7','LRU eviction policy','TLS in-transit encryption','RDB snapshots + AOF persistence'],sla:[{val:'<1ms',lbl:'Read P99'},{val:'99.99%',lbl:'Regional HA availability'}],pattern:'Cache-aside with write-through for critical paths. TTL varies by data category: rate limits (60s), session (24h), ML features (5min), workflow state (24h). Atomic Lua scripts for compare-and-swap operations.',risk:'Cache stampede on cold start — mitigated by probabilistic early expiry (PER algorithm): cache entries are proactively refreshed with probability proportional to proximity to expiry.'},
+    state:{role:'Distributed State Store — GCP Firestore',purpose:'GCP Firestore (native mode) maintains execution state for long-running agentic workflows: current plan node, completed steps, intermediate results, and checkpoint data. Strongly consistent reads ensure reliable workflow resumability after agent failures. Automatic multi-region replication for HA. State inspectable via Firestore console for debugging.',tech:['GCP Firestore (native mode)','Strong consistency reads','Automatic multi-region replication','Distributed transactions (batched writes)'],sla:[{val:'<5ms',lbl:'State read/write P99'},{val:'0 data loss',lbl:'On single zone failure'}],pattern:'Saga pattern for distributed workflow coordination: each step appends to immutable event log; state reconstructible from log. Saga rollback via compensating writes on failure.',risk:'Firestore quota limits under very high write rates — mitigated by write batching and document sharding for hot entities; KEDA scaling reduces per-pod write rate by distributing load.'},
+    dbsql:{role:'SQL Analytics Engine — BigQuery',purpose:'Google BigQuery serverless data warehouse powers all structured query workloads on GCS-backed Delta Lake. Row-level security filters results to tenant scope automatically. BI Engine caching delivers sub-100ms for repeated dashboard queries. The primary interface for operational reporting and ad-hoc analytics.',tech:['Google BigQuery (serverless DW)','BI Engine (in-memory caching)','Row-level security (IAM conditions)','BigQuery Omni (cross-cloud)'],sla:[{val:'<2s',lbl:'Interactive query P50'},{val:'Serverless',lbl:'0-to-50 slot auto-scale'}],pattern:'Consumption-based serverless: zero cost when idle, instant scale-out for bursts. ANSI SQL with Delta Lake external tables. Separate BigQuery projects for production vs BI to prevent interference.',risk:'BI query saturating slots and impacting production scoring — mitigated by slot reservations per workload; query timeout (300s) prevents runaway queries; BigQuery capacity commitments for predictable cost.'},
+    spark:{role:'Distributed Compute — GCP Dataproc',purpose:'GCP Dataproc (managed Spark) handles large-scale data transformations, feature engineering, and model training. Photon-native execution on Databricks-on-GCP provides 10x speed improvement for aggregations. Z-order clustering pre-organizes data for query pattern optimization on GCS.',tech:['GCP Dataproc (managed Spark 3.5)','Databricks ML Runtime 14','Delta Lake 3.x on GCS','Photon columnar execution'],sla:[{val:'<30min',lbl:'Nightly ETL (30TB)'},{val:'64 CPUs',lbl:'Max auto-scale worker pool'}],pattern:'Lambda architecture: Spark batch layer for accurate historical aggregates (Gold tables); Pub/Sub Streams speed layer for near-real-time approximations. Batch corrects speed layer data quality issues.',risk:'Data skew on high-cardinality join keys causing executor OOM — mitigated by Adaptive Query Execution (AQE) auto-tuning; salted joins for known skewed keys.'},
+    fstore:{role:'Feature Store — Vertex AI Feature Store',purpose:'Vertex AI Feature Store eliminates training-serving skew — the #1 cause of production ML failures — by sharing identical feature computation code for training and inference. Online serving via Bigtable delivers <10ms P99. Offline storage in BigQuery enables point-in-time correct training joins.',tech:['Vertex AI Feature Store','Bigtable online serving (<10ms P99)','BigQuery offline training store','Point-in-time joins'],sla:[{val:'<10ms',lbl:'Online serving P99'},{val:'<5min',lbl:'Feature freshness SLA'}],pattern:'Single feature definition for both training and serving: no separate ETL pipelines. Feature groups versioned with semantic versioning; backward compatible changes only.',risk:'Feature staleness during upstream pipeline delay — mitigated by freshness monitoring dashboard; automatic refresh triggered by data pipeline SLA alerts; model confidence degrades gracefully on stale features.'},
+    mlreg:{role:'Model Lifecycle Registry — Vertex AI Model Registry',purpose:'Vertex AI Model Registry tracks all experiments and manages model lifecycle: development → staging → canary → production → archived. Stores artifacts on GCS. Auto-generates model cards with fairness assessments. Required for financial services SR 11-7 model risk management compliance.',tech:['Vertex AI Model Registry','GCS artifact storage','Automated model cards (fairness + accuracy)','Champion/Challenger framework'],sla:[{val:'0-downtime',lbl:'Model promotion strategy'},{val:'Auto-rollback',lbl:'On >5% accuracy degradation'}],pattern:'GitOps model promotion: model PR triggers shadow scoring → 95% statistical significance → canary 5% traffic → full promotion. Automated rollback if metric degradation detected within 1h.',risk:'Model performance silent degradation — mitigated by Vertex AI Model Monitoring drift detection (PSI > 0.2 triggers retraining); weekly holdout evaluation against recent ground truth.'},
+  },
+  azure:{
+    queue:{role:'Async Result Bus — Azure Service Bus',purpose:'Azure Service Bus (Premium tier) result queue decouples computation completion from response delivery. Message sessions enable ordered processing per workflow. Provides durable 7-day retention for audit and replay. Consumer groups allow independent scaling of result processors for different downstream consumers.',tech:['Azure Service Bus (Premium tier)','Message sessions (ordered processing)','Dead-letter queue per consumer','Schema Registry (Avro)'],sla:[{val:'<10ms',lbl:'Result publish latency'},{val:'At-least-once',lbl:'Delivery guarantee'}],pattern:'Event sourcing for result history: all intermediate and final results persisted. Consumer replay from offset enables full workflow reconstruction. Service Bus sessions maintain latest state per workflow ID.',risk:'Consumer lag during traffic spikes — mitigated by KEDA-based autoscaling on message count; priority queues for time-sensitive delivery; dead-letter queue captures failed processing.'},
+    cache:{role:'Hot Data Cache — Azure Cache for Redis',purpose:'Azure Cache for Redis (Premium) serves as the low-latency data layer: ML features (<1ms), session state, rate limit counters, and in-flight workflow state. LRU eviction manages memory under pressure. AOF persistence and geo-replication prevent data loss.',tech:['Azure Cache for Redis Premium','LRU eviction policy','TLS in-transit encryption','Geo-replication + AOF persistence'],sla:[{val:'<1ms',lbl:'Read P99'},{val:'99.9%',lbl:'Azure Cache SLA (Premium)'}],pattern:'Cache-aside with write-through for critical paths. TTL: rate limits (60s), session (24h), ML features (5min), workflow state (24h). Atomic Lua scripts for compare-and-swap operations.',risk:'Cache stampede on cold start — mitigated by probabilistic early expiry (PER algorithm): cache entries proactively refreshed as TTL approaches zero.'},
+    state:{role:'Distributed State Store — Azure Cosmos DB',purpose:'Azure Cosmos DB (NoSQL API) maintains execution state for long-running agentic workflows. 99.999% availability SLA with multi-region writes. Strong consistency for critical workflow checkpoints; bounded-staleness for read-heavy state queries. Automatic partition management handles any throughput scale.',tech:['Azure Cosmos DB (NoSQL API)','Multi-region write replication','Strong + bounded-staleness consistency','Automatic partitioning'],sla:[{val:'<5ms',lbl:'State read/write P99'},{val:'99.999%',lbl:'Multi-region write SLA'}],pattern:'Saga pattern: each workflow step appends to immutable event log; state reconstructible from log. Compensating writes handle rollback on failure — no two-phase commit required.',risk:'Cosmos DB hot partition under skewed workflow load — mitigated by composite partition key design (workflow_id + timestamp); Cosmos DB autopilot mode scales RU/s automatically for traffic spikes.'},
+    dbsql:{role:'SQL Analytics Engine — Azure Synapse',purpose:'Azure Synapse Analytics serverless SQL pool powers structured query workloads on ADLS Gen2-backed Delta Lake. Row-level security filters results to tenant scope. Dedicated SQL pools for high-concurrency workloads. The primary interface for operational reporting and ad-hoc analytics.',tech:['Azure Synapse Analytics (serverless + dedicated)','Synapse Link (real-time analytics)','Row-level security (security policies)','Result cache (dedicated pool)'],sla:[{val:'<2s',lbl:'Interactive query P50'},{val:'Serverless',lbl:'0-to-50 node auto-scale'}],pattern:'Consumption-based serverless: zero cost when idle, instant scale-out. ANSI SQL with Delta Lake tables on ADLS Gen2. Dedicated pools for production workloads vs BI to prevent interference.',risk:'BI query saturating Synapse capacity — mitigated by dedicated pools per workload; 300s query timeout kills runaway queries; workload management groups enforce resource limits.'},
+    spark:{role:'Distributed Compute — Azure Databricks',purpose:'Azure Databricks (managed Spark) handles large-scale data transformations, feature engineering, and model training on ADLS Gen2. Photon-native execution delivers 10x speed improvement for aggregations. Integrated with Unity Catalog for governance and lineage tracking.',tech:['Azure Databricks (managed Spark 3.5)','Databricks ML Runtime 14','Delta Lake 3.x on ADLS Gen2','Photon columnar execution'],sla:[{val:'<30min',lbl:'Nightly ETL (30TB)'},{val:'64 CPUs',lbl:'Max auto-scale worker pool'}],pattern:'Lambda architecture: Spark batch layer for accurate historical Gold aggregates; Event Hubs Streams speed layer for real-time approximations. Batch corrects speed layer data quality issues.',risk:'Data skew on high-cardinality join keys causing executor OOM — mitigated by AQE skew join optimization; salted join keys for known hot entities; broadcast joins for small-dimension tables.'},
+    fstore:{role:'Feature Store — Azure ML Feature Store',purpose:'Azure Machine Learning Feature Store eliminates training-serving skew by sharing identical feature computations for training and production inference. Online serving via Azure Cache for Redis delivers <10ms P99. Offline storage in ADLS Gen2 enables point-in-time correct training joins.',tech:['Azure ML Feature Store','Azure Cache for Redis online (<10ms P99)','ADLS Gen2 offline training store','Point-in-time joins'],sla:[{val:'<10ms',lbl:'Online serving P99'},{val:'<5min',lbl:'Feature freshness SLA'}],pattern:'Single feature definition for both training and serving: no separate ETL pipelines. Feature groups versioned with semantic versioning; backward compatible changes prevent downstream model breakage.',risk:'Feature staleness — mitigated by Azure Monitor freshness alerts; automatic refresh triggered by pipeline SLA alerts; model confidence degrades gracefully on stale features.'},
+    mlreg:{role:'Model Lifecycle Registry — Azure ML Registry',purpose:'Azure Machine Learning Registry tracks all experiments and manages model lifecycle: development → staging → canary → production → archived. Stores artifacts on ADLS Gen2. Auto-generates model cards with fairness assessments. Required for financial services SR 11-7 model risk management compliance.',tech:['Azure ML Model Registry','ADLS Gen2 artifact storage','Automated model cards (fairness + accuracy)','Champion/Challenger framework'],sla:[{val:'0-downtime',lbl:'Model promotion strategy'},{val:'Auto-rollback',lbl:'On >5% accuracy degradation'}],pattern:'GitOps model promotion: model PR → shadow scoring → 95% statistical significance → canary 5% → full production. Automated rollback if accuracy degrades within 1 hour of promotion.',risk:'Model performance silent degradation — mitigated by Azure ML data drift detection (PSI > 0.2 triggers retraining alert); weekly holdout validation against recent ground truth labels.'},
+  }
+};
+let _cloud='aws';
+function switchCloud(p){
+  if(p===_cloud)return;_cloud=p;
+  document.querySelectorAll('.cloud-btn').forEach(b=>b.classList.toggle('active',b.dataset.cloud===p));
+  const ov=CLOUD_LABELS[p]||{};
+  Object.entries(ov).forEach(([id,{label,sub}])=>{
+    const n=NODES.find(n=>n.id===id);if(n){n.label=label;n.sub=sub;}
+    const g=document.querySelector(`[data-node-id="${id}"]`);
+    if(g){const t=g.querySelectorAll('text');if(t[0])t[0].textContent=label;if(t[1])t[1].textContent=sub;}
+    const nb=document.querySelector(`.nnb[data-nav-id="${id}"] .nn-name`);if(nb)nb.textContent=label;
+  });
+  if(_sel)showDp(_sel);
 }
 
 init();

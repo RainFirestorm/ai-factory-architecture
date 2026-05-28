@@ -20,6 +20,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .nav-links{display:flex;gap:4px}
 .nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
 .nav-link:hover,.nav-link.active{color:#34D399;border-color:rgba(52,211,153,.28);background:rgba(52,211,153,.08)}
+.cloud-toggle{display:flex;gap:3px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:3px}
+.cloud-btn{padding:4px 11px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.04em;background:transparent;color:#475569;transition:all .22s;white-space:nowrap}
+.cloud-btn:hover{color:#94A3B8}
+.cloud-btn[data-cloud="aws"].active{background:linear-gradient(135deg,#FF9900,#e07b00);color:#fff;box-shadow:0 2px 10px rgba(255,153,0,.35)}
+.cloud-btn[data-cloud="gcp"].active{background:linear-gradient(135deg,#4285F4,#1a6bd4);color:#fff;box-shadow:0 2px 10px rgba(66,133,244,.35)}
+.cloud-btn[data-cloud="azure"].active{background:linear-gradient(135deg,#0078D4,#005fa8);color:#fff;box-shadow:0 2px 10px rgba(0,120,212,.35)}
 
 /* ── LEGEND BAR ── */
 .legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(5,15,10,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
@@ -117,6 +123,12 @@ svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116p
     </div>
   </div>
   <div class="nav-right">
+    <div class="cloud-toggle">
+      <button class="cloud-btn active" data-cloud="aws"   onclick="switchCloud('aws')">AWS</button>
+      <button class="cloud-btn"        data-cloud="gcp"   onclick="switchCloud('gcp')">GCP</button>
+      <button class="cloud-btn"        data-cloud="azure" onclick="switchCloud('azure')">Azure</button>
+    </div>
+    <div class="vdiv"></div>
     <div class="nav-links">
       <a href="01-technical.html"   class="nav-link">⚙ Technical</a>
       <a href="02-application.html" class="nav-link">🔗 Application</a>
@@ -431,8 +443,10 @@ function clearSel(){
 
 function showDp(id){
   const n=NODES.find(n=>n.id===id);
-  const d=NODE_DETAILS[id];
-  if(!n||!d)return;
+  const base=NODE_DETAILS[id];
+  if(!n||!base)return;
+  const cloudOv=(CLOUD_NODE_DETAILS[_cloud]||{})[id]||{};
+  const d=Object.assign({},base,cloudOv);
   document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
   document.getElementById('dp-role').textContent=d.role;
   document.getElementById('dp-name').textContent=n.label;
@@ -488,6 +502,64 @@ function filterNav(){
     const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
     btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
   });
+}
+
+/* ── CLOUD PROVIDER TOGGLE ── */
+const CLOUD_LABELS={
+  aws:{
+    kafka:    {label:'Amazon MSK',      sub:'Managed Kafka · 100K msg/s'},
+    src_file: {label:'Object Store',    sub:'S3 · Parquet · Delta Lake'},
+    warehouse:{label:'SQL Warehouse',   sub:'Databricks SQL · Redshift'},
+    vectors:  {label:'OpenSearch',      sub:'kNN · ANN Search · Vectors'},
+    embedsvc: {label:'Embedding Svc',   sub:'Bedrock · RAG · Semantic'},
+    dashsrv:  {label:'BI Dashboards',   sub:'Grafana · QuickSight'},
+  },
+  gcp:{
+    kafka:    {label:'Pub/Sub',         sub:'GCP Events · 100K msg/s'},
+    src_file: {label:'Object Store',    sub:'GCS · Parquet · Delta Lake'},
+    warehouse:{label:'BigQuery',        sub:'Serverless DW · BI Connect'},
+    vectors:  {label:'Vertex Matching', sub:'ANN Search · Embeddings'},
+    embedsvc: {label:'Embedding Svc',   sub:'Vertex AI · RAG · Semantic'},
+    dashsrv:  {label:'BI Dashboards',   sub:'Looker · Data Studio'},
+  },
+  azure:{
+    kafka:    {label:'Event Hubs',      sub:'Azure Events · 100K msg/s'},
+    src_file: {label:'Object Store',    sub:'ADLS Gen2 · Parquet · Delta'},
+    warehouse:{label:'Synapse Analytics',sub:'Azure DW · BI Connect'},
+    vectors:  {label:'Azure AI Search', sub:'Vector · ANN · Embeddings'},
+    embedsvc: {label:'Embedding Svc',   sub:'Azure OpenAI · RAG · Sem.'},
+    dashsrv:  {label:'BI Dashboards',   sub:'Power BI · Azure Monitor'},
+  }
+};
+const CLOUD_NODE_DETAILS={
+  aws:{},
+  gcp:{
+    kafka:{role:'Message Queue — GCP Pub/Sub',purpose:'GCP Pub/Sub serves as the event backbone of the data platform. Fully managed, multi-region delivery at 100K+ msg/s with sub-10ms latency. Schema Registry enforces Protobuf/Avro contracts preventing incompatible messages. Dead-letter subscriptions capture deserialization failures for inspection. KEDA-based autoscaling on subscription backlog.',tech:['GCP Pub/Sub (fully managed)','Schema Registry (Protobuf + Avro)','KEDA autoscaling on backlog','Dead-letter subscription per consumer'],sla:[{val:'<10ms',lbl:'Produce latency P99'},{val:'7 days',lbl:'Message retention'}],pattern:'Topic-per-entity-type with key-based routing enables ordered processing per entity. Compacted topics maintain latest state for lookup-style consumers without full replay.',risk:'Pub/Sub backlog accumulation during consumer failures — mitigated by Zonal redundancy; KEDA autoscaling on backlog metric; dead-letter subscription for unprocessable messages.'},
+    warehouse:{role:'SQL Warehouse — Google BigQuery',purpose:'BigQuery serverless provides a high-performance query engine for BI workloads on GCS-backed Delta Lake via external tables. Auto-scales from 0 to 50 slots in seconds. Row-level security via IAM conditions. BI Engine result cache delivers sub-100ms for repeated dashboard queries. Separate BigQuery projects prevent noisy-neighbor interference.',tech:['Google BigQuery (serverless)','BI Engine (in-memory caching)','Row-level security (IAM conditions)','BigQuery Omni (Delta Lake external tables)'],sla:[{val:'<2s',lbl:'Interactive query P50'},{val:'Serverless',lbl:'0-to-50 slot auto-scale'}],pattern:'Consumption-based serverless: zero cost when idle; instant scale-out for bursts. ANSI SQL with Delta Lake extensions. Separate BigQuery projects for production vs BI to prevent workload interference.',risk:'BI query saturating slots impacting production scoring — mitigated by slot commitments per workload; query timeout (300s) kills runaway queries; BigQuery reservations enforce resource limits.'},
+    vectors:{role:'Vector Database — Vertex AI Vector Search',purpose:'Vertex AI Vector Search (ScaNN algorithm) enables sub-50ms ANN search for semantic retrieval. Index built from embedding vectors of product descriptions, user histories, and knowledge base articles. Rebuilt nightly from GCS; atomic hot-swap without search downtime. Optimized IVF + quantization compression reduces index size 10x.',tech:['Vertex AI Vector Search (ScaNN)','GCS (index persistence)','Atomic hot-swap (zero-downtime rebuild)','IVF + quantization compression'],sla:[{val:'<20ms',lbl:'ANN search P99 (top-100)'},{val:'Nightly',lbl:'Index rebuild cadence'}],pattern:'Index-as-code: Vertex AI Vector Search parameters stored in Git. Index quality evaluated on recall@100 against held-out golden set after each rebuild; automatic rollback if recall drops >5%.',risk:'Index staleness as new products/documents are added — mitigated by incremental streaming updates to Vertex AI index; nightly full rebuild for accuracy guarantee.'},
+    embedsvc:{role:'Embedding Service — Vertex AI',purpose:'Vertex AI Text Embeddings API generates dense vector representations from text and multimodal data. Serves both batch embedding (for FAISS/Vector Search index rebuild) and online embedding (for real-time query vectorization). Serverless auto-scales to 0 when idle for cost efficiency. GPU-accelerated for low latency.',tech:['Vertex AI Text Embeddings API','Vertex AI Multimodal Embeddings','Vertex AI Online Prediction (serving)','Batch + real-time inference modes'],sla:[{val:'<50ms',lbl:'Single embedding P99'},{val:'<5s',lbl:'Batch of 1000 embeddings'}],pattern:'Model versioning: embedding model version pinned per index version. Index and embedding service always use the same model version — prevents retrieval quality degradation from embedding drift.',risk:'Embedding model update breaking semantic search quality — mitigated by A/B evaluation before deployment: new model must achieve equal or better recall@100 on held-out query set before traffic is shifted.'},
+    dashsrv:{role:'BI Dashboard Serving — Looker',purpose:'Looker and Grafana provide real-time operational monitoring and business intelligence dashboards backed by BigQuery. Looker connects natively to BigQuery for fast BI queries with row-level security. Dashboards served from result cache. LookML semantic layer provides consistent business metrics across all dashboards.',tech:['Looker (BI dashboards + LookML)','Grafana (operational dashboards)','BigQuery result cache (24h TTL)','Row-level security (Looker access filters)'],sla:[{val:'<2s',lbl:'Dashboard load time P99'},{val:'Real-time',lbl:'Operational metrics refresh'}],pattern:'Separate OLAP and operational dashboard layers: Grafana for time-series operational metrics (Cloud Monitoring-backed); Looker for business intelligence (BigQuery-backed). No cross-contamination of workloads.',risk:'Dashboard queries overloading BigQuery during peak hours — mitigated by dedicated slot reservations for BI workloads; pre-computed Gold table aggregates absorb most query load; result cache handles repeat loads.'},
+  },
+  azure:{
+    kafka:{role:'Message Queue — Azure Event Hubs',purpose:'Azure Event Hubs (Kafka-protocol compatible) serves as the event backbone at 100K+ msg/s. Geo-redundant namespace replication guarantees zero data loss on regional failure. Schema Registry enforces Avro contracts. Dead-letter entity captures failed events. KEDA-based autoscaling on consumer group lag. Kafka-compatible API enables drop-in replacement with no code changes.',tech:['Azure Event Hubs (Kafka-compatible)','Schema Registry (Avro contracts)','KEDA autoscaling on consumer lag','Dead-letter entity per consumer group'],sla:[{val:'<10ms',lbl:'Produce latency P99'},{val:'7 days',lbl:'Message retention'}],pattern:'Topic-per-entity-type with partition key routing ensures ordered processing per entity. Consumer group isolation prevents one slow consumer from impacting others.',risk:'Consumer lag accumulation during traffic spikes — mitigated by KEDA autoscaling; geo-redundant namespace ensures availability during regional events; dead-letter entity for unprocessable messages.'},
+    warehouse:{role:'SQL Warehouse — Azure Synapse Analytics',purpose:'Azure Synapse Analytics serverless SQL pool powers BI workloads on ADLS Gen2-backed Delta Lake. Auto-scales from 0 on demand. Row-level security via Synapse security policies. Dedicated SQL pools for high-concurrency workloads. Synapse Link provides real-time analytics over Azure Cosmos DB.',tech:['Azure Synapse Analytics (serverless + dedicated)','Synapse Link (real-time analytics)','Row-level security (security policies)','Result cache (dedicated pool)'],sla:[{val:'<2s',lbl:'Interactive query P50'},{val:'Serverless',lbl:'0-to-node auto-scale'}],pattern:'Consumption-based: zero cost when idle, instant scale-out. ANSI SQL with Delta Lake tables on ADLS Gen2. Dedicated pools per workload prevent noisy-neighbor interference.',risk:'BI query saturating Synapse capacity — mitigated by dedicated pools per workload type; 300s query timeout kills runaway queries; workload management groups enforce resource limits per team.'},
+    vectors:{role:'Vector Database — Azure AI Search',purpose:'Azure AI Search enables sub-50ms vector ANN search for semantic retrieval with native hybrid (vector + BM25) search. Index built from embedding vectors of product descriptions, user histories, and policy documents. ADLS Gen2 indexer enables incremental updates. Semantic ranker reranks top-K results for precision.',tech:['Azure AI Search (vector + BM25 hybrid)','ADLS Gen2 indexer (incremental)','Semantic ranker (reranking)','HNSW vector index'],sla:[{val:'<20ms',lbl:'ANN search P99 (top-100)'},{val:'Nightly',lbl:'Index rebuild cadence'}],pattern:'Index-as-code: Azure AI Search configuration stored in Git. Index quality evaluated on recall@100 after each rebuild; rollback to previous index version if recall drops >5%.',risk:'Index staleness as new products/documents are added — mitigated by incremental ADLS Gen2 indexer updates; nightly full rebuild for accuracy guarantee.'},
+    embedsvc:{role:'Embedding Service — Azure OpenAI',purpose:'Azure OpenAI text-embedding-3-large generates dense vector representations. Serves both batch embedding (for index rebuild) and online embedding (for real-time query vectorization). Deployed in Azure region for data residency compliance. Private endpoint ensures VNet integration without public internet exposure.',tech:['Azure OpenAI text-embedding-3-large','Azure OpenAI Batch API (bulk)','Private endpoint (VNet integration)','Managed Identity authentication'],sla:[{val:'<50ms',lbl:'Single embedding P99'},{val:'<5s',lbl:'Batch of 1000 embeddings'}],pattern:'Model versioning: embedding model version pinned per index version. Index and embedding service always use same model version — prevents retrieval quality degradation from embedding model drift.',risk:'Azure OpenAI rate limits during bulk embedding jobs — mitigated by Batch API for large volume jobs; exponential backoff with jitter; provisioned throughput for predictable capacity.'},
+    dashsrv:{role:'BI Dashboard Serving — Power BI',purpose:'Power BI Premium and Grafana provide real-time operational monitoring and business intelligence dashboards. Power BI connects natively to Azure Synapse and ADLS Gen2 for fast BI queries. Row-level security restricts data to viewer\'s organizational scope. Azure Monitor integration provides operational metrics dashboards.',tech:['Power BI Premium (BI dashboards)','Grafana (operational dashboards)','Azure Synapse result cache','Row-level security (Power BI RLS)'],sla:[{val:'<2s',lbl:'Dashboard load time P99'},{val:'Real-time',lbl:'Operational metrics refresh'}],pattern:'Separate OLAP and operational layers: Grafana for time-series operational metrics (Azure Monitor-backed); Power BI for business intelligence (Synapse-backed). No cross-contamination of workloads.',risk:'Dashboard queries overloading Synapse during peak business hours — mitigated by dedicated SQL warehouse for BI workloads; pre-computed Gold table aggregates absorb most query load; result cache handles repeat loads.'},
+  }
+};
+let _cloud='aws';
+function switchCloud(p){
+  if(p===_cloud)return;_cloud=p;
+  document.querySelectorAll('.cloud-btn').forEach(b=>b.classList.toggle('active',b.dataset.cloud===p));
+  const ov=CLOUD_LABELS[p]||{};
+  Object.entries(ov).forEach(([id,{label,sub}])=>{
+    const n=NODES.find(n=>n.id===id);if(n){n.label=label;n.sub=sub;}
+    const g=document.querySelector(`[data-node-id="${id}"]`);
+    if(g){const t=g.querySelectorAll('text');if(t[0])t[0].textContent=label;if(t[1])t[1].textContent=sub;}
+    const nb=document.querySelector(`.nnb[data-nav-id="${id}"] .nn-name`);if(nb)nb.textContent=label;
+  });
+  if(_sel)showDp(_sel);
 }
 
 init();

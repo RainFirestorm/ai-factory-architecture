@@ -27,6 +27,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .nav-links{display:flex;gap:4px}
 .nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
 .nav-link:hover,.nav-link.active{color:#38BDF8;border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.08)}
+/* ── CLOUD TOGGLE ── */
+.cloud-toggle{display:flex;gap:3px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:3px}
+.cloud-btn{padding:4px 11px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.04em;background:transparent;color:#475569;transition:all .22s;white-space:nowrap}
+.cloud-btn:hover{color:#94A3B8}
+.cloud-btn[data-cloud="aws"].active{background:linear-gradient(135deg,#FF9900,#e07b00);color:#fff;box-shadow:0 2px 10px rgba(255,153,0,.35)}
+.cloud-btn[data-cloud="gcp"].active{background:linear-gradient(135deg,#4285F4,#1a6bd4);color:#fff;box-shadow:0 2px 10px rgba(66,133,244,.35)}
+.cloud-btn[data-cloud="azure"].active{background:linear-gradient(135deg,#0078D4,#005fa8);color:#fff;box-shadow:0 2px 10px rgba(0,120,212,.35)}
 
 /* ── LEGEND BAR ── */
 .legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(6,9,15,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
@@ -134,6 +141,32 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .brief-bar{position:fixed;top:82px;left:0;right:0;z-index:185;height:34px;display:flex;align-items:center;padding:0 28px;gap:10px;background:rgba(255,255,255,.022);border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;color:rgba(255,255,255,.42);font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden}
 .brief-bar strong{color:rgba(255,255,255,.7);font-weight:600}
 .brief-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;opacity:.75}
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  nav,.main-nav{height:48px;padding:0 10px}
+  .nav-role{display:none}
+  .nav-title{font-size:11.5px}
+  .vdiv{display:none}
+  .nav-right{overflow-x:auto;gap:6px}
+  .nav-links{flex-wrap:nowrap;gap:2px}
+  .nav-link{padding:4px 7px;font-size:10px}
+  .legend-bar{top:48px;height:28px;overflow-x:auto;flex-wrap:nowrap;gap:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .legend-bar::-webkit-scrollbar{display:none}
+  .brief-bar{display:none}
+  #diagram{top:76px!important;height:calc(100vh - 76px)!important;touch-action:none}
+  .np{top:48px!important;height:calc(100vh - 48px)!important;width:82vw!important;left:-82vw!important;z-index:280!important}
+  .np.open{left:0!important}
+  .dp{top:auto!important;bottom:-100%!important;right:0!important;left:0!important;width:100%!important;height:78vh!important;border-left:none!important;border-top:1px solid rgba(255,255,255,.1)!important;border-radius:16px 16px 0 0!important;transition:bottom .38s cubic-bezier(.4,0,.2,1)!important}
+  .dp.open{bottom:0!important}
+  .dp-hero{height:80px}
+  .dp-hero-name{font-size:15px}
+  .dp-body{padding:12px}
+  .devops-btn{padding:5px 9px;font-size:11px}
+  .devops-panel{height:75vh}
+  .devops-body{flex-direction:column;overflow-y:auto}
+  .devops-notes{width:100%;flex-direction:row;flex-wrap:wrap;padding-top:0}
+  .note-card{flex:1;min-width:145px}
+}
 </style>
 </head>
 <body>
@@ -152,6 +185,12 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <button class="devops-btn" id="devops-btn" onclick="toggleDevOps()">
       <span class="icon">⚡</span>DevOps / CI·CD
     </button>
+    <div class="vdiv"></div>
+    <div class="cloud-toggle">
+      <button class="cloud-btn active" data-cloud="aws"   onclick="switchCloud('aws')">AWS</button>
+      <button class="cloud-btn"        data-cloud="gcp"   onclick="switchCloud('gcp')">GCP</button>
+      <button class="cloud-btn"        data-cloud="azure" onclick="switchCloud('azure')">Azure</button>
+    </div>
     <div class="vdiv"></div>
     <div class="nav-links">
       <a href="01-technical.html"   class="nav-link active">⚙ Technical</a>
@@ -643,8 +682,10 @@ function clearSel(){
 
 function showDp(id){
   const n=NODES.find(n=>n.id===id);
-  const d=NODE_DETAILS[id];
-  if(!n||!d)return;
+  const base=NODE_DETAILS[id];
+  if(!n||!base)return;
+  const cloudOv=(CLOUD_NODE_DETAILS[_cloud]||{})[id]||{};
+  const d=Object.assign({},base,cloudOv);
   document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
   document.getElementById('dp-role').textContent=d.role;
   document.getElementById('dp-name').textContent=n.label;
@@ -700,6 +741,82 @@ function filterNav(){
     const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
     btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
   });
+}
+
+/* ── CLOUD PROVIDER TOGGLE ── */
+const CLOUD_LABELS = {
+  aws:{
+    cdn:  {label:'Global CDN',        sub:'CloudFront · 95% Hit Rate'},
+    lb1a: {label:'LB Zone 1A',        sub:'AWS ALB · TLS · Rate Limit'},
+    lb1b: {label:'LB Zone 1B',        sub:'AWS ALB · TLS · Failover'},
+    vault:{label:'Vault',             sub:'HashiCorp · KMS Unseal'},
+    kafka:{label:'Managed Kafka',     sub:'Amazon MSK · Multi-AZ'},
+    dbc:  {label:'Databricks Cluster',sub:'AWS · 64 CPUs · 256 GB'},
+    delta:{label:'Delta Lake',        sub:'S3 · ACID · Time Travel'},
+    redis:{label:'Redis Cache',       sub:'ElastiCache · 16 GB · HA'},
+    pg:   {label:'PostgreSQL',        sub:'RDS Aurora · Multi-AZ'},
+  },
+  gcp:{
+    cdn:  {label:'Cloud CDN',         sub:'GCP CDN · Edge Cache'},
+    lb1a: {label:'Cloud LB 1A',       sub:'GCP LB · SSL · Rate Limit'},
+    lb1b: {label:'Cloud LB 1B',       sub:'GCP LB · SSL · Failover'},
+    vault:{label:'Secret Manager',    sub:'GCP KMS · Auto-rotate'},
+    kafka:{label:'Pub/Sub',           sub:'GCP · Multi-Region · Streams'},
+    dbc:  {label:'Databricks on GCP', sub:'GCP · 64 CPUs · 256 GB'},
+    delta:{label:'Delta Lake',        sub:'GCS · ACID · Time Travel'},
+    redis:{label:'Memorystore',       sub:'GCP Redis · 16 GB · HA'},
+    pg:   {label:'Cloud SQL',         sub:'GCP Postgres · HA · PITR'},
+  },
+  azure:{
+    cdn:  {label:'Azure CDN',         sub:'Front Door · Edge · WAF'},
+    lb1a: {label:'Front Door 1A',     sub:'Azure LB · TLS · Rate Limit'},
+    lb1b: {label:'Front Door 1B',     sub:'Azure LB · TLS · Failover'},
+    vault:{label:'Key Vault',         sub:'Azure HSM · Auto-rotate'},
+    kafka:{label:'Event Hubs',        sub:'Azure · Multi-AZ · Streams'},
+    dbc:  {label:'Azure Databricks',  sub:'Azure · 64 CPUs · 256 GB'},
+    delta:{label:'Delta Lake',        sub:'ADLS · ACID · Time Travel'},
+    redis:{label:'Azure Cache Redis', sub:'Azure Redis · 16 GB · HA'},
+    pg:   {label:'Azure SQL',         sub:'Flex Server · HA · Replica'},
+  }
+};
+const CLOUD_NODE_DETAILS={
+  aws:{},
+  gcp:{
+    cdn:{role:'CDN / Edge — Google Cloud CDN',purpose:'Google Cloud CDN serves 95%+ of web/mobile requests from GCP edge PoPs globally. Cloud Armor WAF rules block DDoS, SQL injection, and bot traffic before reaching GKE. Adaptive Protection provides ML-based DDoS mitigation at the edge. Rate limiting enforced per IP and per region via Cloud Armor security policies.',tech:['Google Cloud CDN (global edge PoPs)','Cloud Armor WAF (OWASP Top 10)','Edge API response caching','Adaptive Protection (ML-based DDoS)'],sla:[{val:'95%',lbl:'Edge cache hit rate'},{val:'<50ms',lbl:'Edge response time globally'}],pattern:'Cache-control strategy: static assets (1 year TTL), non-personalized API (5 min TTL), personalized responses (no cache). Surrogate-Key invalidation for instant cache purge on content updates.',risk:'CDN misconfiguration caching personalized responses — mitigated by Vary: Authorization header enforcement; no-store cache control on all authenticated endpoints; automated cache-poisoning tests in CI.'},
+    lb1a:{role:'Network — Cloud Load Balancing Zone 1A',purpose:'GCP Global HTTP(S) Load Balancer in primary zone handling TLS termination, per-IP rate limiting, and HTTP/2. Google-managed SSL certificates auto-rotate. Backend GKE pods communicate over HTTP/2 within the VPC. Health check probes route traffic away from unhealthy pods within 10 seconds.',tech:['GCP Global HTTP(S) Load Balancer','Google-managed SSL certificates (auto-rotate)','HTTP/2 multiplexing','Health check probes (10s intervals)'],sla:[{val:'10s',lbl:'Unhealthy pod detection'},{val:'99.99%',lbl:'GCP LB availability SLA'}],pattern:'Layer 7 load balancing: sticky sessions disabled (stateless pods); least-outstanding-requests algorithm distributes to least-busy pod. Connection draining (30s) ensures in-flight requests complete before pod termination.',risk:'Certificate expiry — architecturally prevented by Google-managed cert auto-renewal 30 days before expiry; Cloud Monitoring alert on certificate age >270 days.'},
+    lb1b:{role:'Network — Cloud Load Balancing Zone 1B',purpose:'Redundant GCP Load Balancer in secondary zone, active-active with Zone 1A via Cloud DNS weighted routing. Both zones serve live traffic simultaneously. If Zone 1A becomes unhealthy, Cloud DNS health checks automatically shift 100% traffic to Zone 1B within the TTL window.',tech:['GCP Cloud Load Balancing (Zone 1B)','Cloud DNS weighted routing (50/50)','Automatic failover (health probes)','Cross-zone load balancing'],sla:[{val:'<30s',lbl:'AZ failover time'},{val:'Active-active',lbl:'Both zones serve traffic'}],pattern:'Active-active multi-zone: traffic split 50/50 across zones normally. On zone failure, Cloud DNS health check shifts 100% to surviving zone within TTL (30s). No manual intervention required.',risk:'Cloud DNS health check false positive triggering unnecessary failover — mitigated by 3-of-3 health check consensus; health check endpoint validates database connectivity, not just HTTP 200.'},
+    vault:{role:'Security — GCP Secret Manager',purpose:'GCP Secret Manager centralizes all AI Factory credentials: database passwords, API keys (Vertex AI, Databricks), TLS certificates, and encryption keys. Automatic secret versioning and rotation — no static credentials in environment variables or config files. Cloud Audit Logs provide compliance trail for all secret access events.',tech:['GCP Secret Manager (fully managed)','Automatic secret versioning + rotation','GCP KMS (CMEK envelope encryption)','Workload Identity Federation (keyless auth)'],sla:[{val:'Auto-rotate',lbl:'All secrets versioned automatically'},{val:'Zero static',lbl:'No hardcoded credentials anywhere'}],pattern:'Workload Identity Federation: each pod authenticates via GKE Service Account bound to a GCP IAM Service Account — no long-lived credentials injected. App reads secrets via Secret Manager API at runtime.',risk:'Secret Manager unavailability blocking all service starts — mitigated by GCP SLA (99.95%); application-level secret caching with short TTL; graceful startup retry with exponential backoff.'},
+    kafka:{role:'Network — GCP Pub/Sub (Event Bus)',purpose:'GCP Pub/Sub serves as the AI Factory event backbone with global at-least-once delivery. Multi-region topic replication guarantees zero data loss on single-region failure. Ingest events, agent results, and audit logs flow through Pub/Sub topics. Schema Registry enforces Protobuf/Avro contracts preventing schema-incompatible messages. KEDA autoscaling on subscription backlog depth.',tech:['GCP Pub/Sub (fully managed)','Schema Registry (Protobuf + Avro)','Multi-region message replication','KEDA autoscaling on subscription lag'],sla:[{val:'<10ms',lbl:'Publish latency P99'},{val:'7 days',lbl:'Message retention'}],pattern:'Topic-per-domain: separate Pub/Sub topics for each data domain (ingest, agent-results, audit, alerts). Subscription isolation prevents one slow consumer from impacting others.',risk:'Pub/Sub subscription backlog accumulating under load — mitigated by KEDA autoscaling (consumer pods scale on backlog metric); priority subscriptions for time-sensitive messages; dead-letter topics for failed processing.'},
+    dbc:{role:'Databricks — Primary Compute (GCP)',purpose:'Databricks ML Runtime cluster on GCP providing core compute for all AI Factory data and ML workloads: ETL, feature engineering, and model training. 64 CPU, 256 GB RAM auto-scaling cluster with Photon. Connected to Delta Lake on GCS. MLflow tracking integrated for experiment management.',tech:['Databricks ML Runtime 14 (Spark 3.5)','Photon columnar engine (10x faster)','64 CPUs · 256 GB RAM (max)','GCP Preemptible VMs (60% cost reduction)'],sla:[{val:'<30 min',lbl:'30 TB nightly ETL'},{val:'2-32',lbl:'Worker node auto-scale range'}],pattern:'Preemptible-first: Databricks uses GCP Preemptible VMs for 80% of compute (60% cost reduction). On-demand for the driver and critical job stages. Preemption handled by Spark task retry.',risk:'Databricks cluster startup time (3-5 min) creating latency for on-demand workloads — mitigated by always-on small cluster (2 workers) for interactive queries; larger clusters pre-warmed before scheduled jobs.'},
+    delta:{role:'Storage — Delta Lake on GCS (30 TB)',purpose:'Primary data lake storing all AI Factory data in Delta format on Google Cloud Storage. ACID transactions, time travel (30-day history), and unified batch + streaming on 30 TB. Three-tier medallion: Bronze (raw on GCS), Silver (validated), Gold (business aggregates). All model training data sourced from Delta.',tech:['Delta Lake 3.x on GCS','ACID transactions + time travel','Medallion (Bronze/Silver/Gold)','Z-ORDER + liquid clustering'],sla:[{val:'30 TB',lbl:'Current data volume'},{val:'~$180/mo',lbl:'Storage cost (GCS + compression)'}],pattern:'Immutable Bronze layer: raw data never modified after ingestion. All corrections applied in Silver via MERGE. Full audit lineage from Gold metrics back to raw source events on GCS.',risk:'Accidental data deletion — mitigated by GCS Object Retention policy on Bronze prefix; Delta VACUUM blocked on Bronze tables; minimum 30-day time travel for point-in-time recovery.'},
+    redis:{role:'Storage — GCP Memorystore (Redis)',purpose:'Memorystore for Redis 7 (16 GB, fully managed) providing the low-latency data layer: ML feature cache (<1ms), session state, rate limit counters, and in-flight workflow state. Regional HA replica provides zero-downtime failover. AOF persistence prevents data loss on restart. Fully managed with automatic patching by GCP.',tech:['GCP Memorystore for Redis 7 (16 GB)','TLS in-transit + at-rest encryption','AOF + RDB persistence','Regional HA replica (auto-failover)'],sla:[{val:'<1ms',lbl:'Read P99'},{val:'99.99%',lbl:'Regional HA availability'}],pattern:'Cache-aside with calibrated TTL: rate limits (60s), session (24h), ML features (5min), workflow state (24h), plan cache (1h). Lua scripts for atomic compare-and-swap operations.',risk:'Cache stampede on mass expiry — mitigated by probabilistic early expiry (PER algorithm): keys proactively refreshed with probability proportional to proximity to expiry.'},
+    pg:{role:'Storage — GCP Cloud SQL (PostgreSQL HA)',purpose:'Cloud SQL PostgreSQL 15 HA instance storing structured operational data: request/response audit log, user preferences, A/B experiment results, and model performance metrics. Read replicas for analytics queries. pg_partman manages monthly partitioning with automated archival to Delta Lake (GCS) after 90 days.',tech:['GCP Cloud SQL PostgreSQL 15 HA','Automated failover (<60s)','Read replicas (analytics isolation)','pg_trgm (full-text search)'],sla:[{val:'99.95%',lbl:'Cloud SQL HA availability SLA'},{val:'<60s',lbl:'Automated failover time'}],pattern:'CQRS: writes go to Cloud SQL primary; analytics reads go to read replicas. pg_partman monthly partitions enable O(1) archival via partition detach.',risk:'Cloud SQL storage growth from high-volume audit logging — mitigated by pg_partman automated archival to Delta Lake (GCS) after 90 days; cold storage 10x cheaper per GB.'},
+  },
+  azure:{
+    cdn:{role:'CDN / Edge — Azure Front Door',purpose:'Azure Front Door serves 95%+ of web/mobile requests from Microsoft global PoPs. Azure WAF rules block DDoS, SQL injection, and bot traffic before reaching AKS. Rate limiting and bot protection enforced via Front Door policies. Traffic Manager provides intelligent global load balancing with geo-routing capabilities.',tech:['Azure Front Door (global CDN + WAF)','Azure WAF Policy (OWASP Top 10)','Edge API response caching','Rate limiting via Front Door rules'],sla:[{val:'95%',lbl:'Edge cache hit rate'},{val:'<50ms',lbl:'Edge response time globally'}],pattern:'Cache-control strategy: static assets (1 year TTL), non-personalized API (5 min TTL), personalized responses (no cache). Purge by cache key for instant invalidation on content updates.',risk:'CDN misconfiguration caching personalized responses — mitigated by Vary: Authorization header enforcement; no-store cache control on all authenticated endpoints; automated cache-poisoning tests in CI.'},
+    lb1a:{role:'Network — Azure Application Gateway Zone 1A',purpose:'Azure Application Gateway (WAF v2) in Zone 1A handling TLS termination, per-IP rate limiting, and HTTP/2. TLS certificates managed by Azure Key Vault with auto-rotation. Backend AKS pods communicate over HTTP/2 within the VNet. Health probes route traffic away from unhealthy pods within 10 seconds.',tech:['Azure Application Gateway WAF v2','Azure Key Vault TLS (auto-rotate)','HTTP/2 multiplexing','Health probes (10s intervals)'],sla:[{val:'10s',lbl:'Unhealthy pod detection'},{val:'99.95%',lbl:'Azure App Gateway SLA'}],pattern:'Layer 7 load balancing with WAF: sticky sessions disabled (stateless pods); round-robin with health probe weighted routing. Connection draining (30s) ensures in-flight requests complete before pod removal.',risk:'Certificate expiry — architecturally prevented by Azure Key Vault cert rotation 90 days before expiry; Azure Monitor alert on certificate age >270 days.'},
+    lb1b:{role:'Network — Azure Application Gateway Zone 1B',purpose:'Redundant Azure Application Gateway in Zone 1B, active-active with Zone 1A via Azure Traffic Manager. Both gateways serve live traffic simultaneously. On Zone 1A failure, Traffic Manager health probes automatically shift 100% traffic to Zone 1B within TTL window.',tech:['Azure Application Gateway (Zone 1B)','Azure Traffic Manager (weighted routing)','Automatic failover (health probes)','Cross-zone load balancing'],sla:[{val:'<30s',lbl:'AZ failover time'},{val:'Active-active',lbl:'Both zones serve traffic'}],pattern:'Active-active zone design: both gateways serve live traffic normally. No cold-start on failover. Zone failover is seamless to users via Traffic Manager automatic health-check routing.',risk:'Traffic Manager health check false positive — mitigated by 3 consecutive probe failures before failover; health check endpoint validates application health, not just TCP connectivity.'},
+    vault:{role:'Security — Azure Key Vault',purpose:'Azure Key Vault (HSM-backed) centralizes all AI Factory credentials: database passwords, API keys (Azure OpenAI, Databricks), TLS certificates, and encryption keys. Automatic secret rotation via Key Vault rotation policies — no static credentials anywhere. Azure Monitor Diagnostic Logs provide full compliance audit trail for all secret access.',tech:['Azure Key Vault (HSM-backed)','Automatic secret rotation policies','Azure Managed Identity (keyless auth)','Diagnostic Logs (Azure Monitor)'],sla:[{val:'Auto-rotate',lbl:'All secrets rotated by policy'},{val:'Zero static',lbl:'No hardcoded credentials anywhere'}],pattern:'Managed Identity: each AKS pod uses a pod-bound Managed Identity to authenticate to Key Vault — no credentials injected. App reads secrets via Key Vault SDK at runtime; cached with short TTL.',risk:'Key Vault itself becoming unavailable — mitigated by Azure SLA (99.9%); application-level secret caching with short TTL; graceful startup retry; zone-redundant Key Vault for HA.'},
+    kafka:{role:'Network — Azure Event Hubs (Event Bus)',purpose:'Azure Event Hubs (Kafka-protocol compatible) serves as the AI Factory event backbone. Geo-redundant namespace replication ensures zero data loss on regional failure. Ingest events, agent results, and audit logs flow through Event Hubs. Schema Registry enforces Avro contracts preventing incompatible messages. KEDA autoscaling on consumer group lag.',tech:['Azure Event Hubs (Kafka-compatible)','Schema Registry (Avro contracts)','Geo-redundant namespace replication','KEDA autoscaling on consumer lag'],sla:[{val:'<10ms',lbl:'Publish latency P99'},{val:'7 days',lbl:'Message retention'}],pattern:'Topic-per-domain: separate Event Hub namespaces for each data domain. Consumer group isolation prevents one slow consumer from impacting others. Kafka-protocol compatibility enables drop-in replacement with no code changes.',risk:'Event Hubs consumer lag during traffic spikes — mitigated by KEDA autoscaling (consumer pods scale on lag metric); dead-letter entity captures failed messages; priority consumer groups for time-sensitive events.'},
+    dbc:{role:'Databricks — Primary Compute (Azure)',purpose:'Azure Databricks ML Runtime cluster providing core compute for all AI Factory workloads: ETL, feature engineering, and model training. 64 CPU, 256 GB RAM auto-scaling cluster with Photon. Connected to Delta Lake on ADLS Gen2. MLflow tracking integrated for experiment management.',tech:['Databricks ML Runtime 14 (Spark 3.5)','Photon columnar engine (10x faster)','64 CPUs · 256 GB RAM (max)','Azure Spot VMs (60% cost reduction)'],sla:[{val:'<30 min',lbl:'30 TB nightly ETL'},{val:'2-32',lbl:'Worker node auto-scale range'}],pattern:'Spot-instance-first: Azure Databricks uses Spot VMs for 80% of compute (60% cost reduction). On-demand for the driver and critical job stages. Spot eviction handled by Spark task retry.',risk:'Databricks cluster startup time creating latency for on-demand workloads — mitigated by always-on small cluster (2 workers) for interactive queries; larger clusters pre-warmed before scheduled jobs.'},
+    delta:{role:'Storage — Delta Lake on ADLS Gen2 (30 TB)',purpose:'Primary data lake storing all AI Factory data in Delta format on Azure Data Lake Storage Gen2. ACID transactions, time travel (30-day history), and unified batch + streaming on 30 TB. Three-tier medallion: Bronze (raw on ADLS), Silver (validated), Gold (business aggregates). All model training sourced from Delta.',tech:['Delta Lake 3.x on ADLS Gen2','ACID transactions + time travel','Medallion (Bronze/Silver/Gold)','Z-ORDER + liquid clustering'],sla:[{val:'30 TB',lbl:'Current data volume'},{val:'~$190/mo',lbl:'Storage cost (ADLS + compression)'}],pattern:'Immutable Bronze layer: raw data never modified after ingestion. Corrections applied in Silver via MERGE. Full audit lineage from Gold metrics back to raw source events on ADLS Gen2.',risk:'Accidental data deletion — mitigated by ADLS Gen2 immutability policy on Bronze; Delta VACUUM blocked on Bronze tables; minimum 30-day time travel for point-in-time recovery.'},
+    redis:{role:'Storage — Azure Cache for Redis',purpose:'Azure Cache for Redis (Premium, 16 GB) providing the low-latency data layer: ML feature cache (<1ms), session state, rate limit counters, and workflow state. Zone-redundant deployment with geo-replication for HA across regions. AOF persistence prevents data loss on restart. Fully managed with automatic patching.',tech:['Azure Cache for Redis Premium (16 GB)','TLS in-transit + at-rest encryption','AOF + RDB persistence','Geo-replication (cross-region HA)'],sla:[{val:'<1ms',lbl:'Read P99'},{val:'99.9%',lbl:'Azure Cache SLA (Premium)'}],pattern:'Cache-aside with calibrated TTL: rate limits (60s), session (24h), ML features (5min), workflow state (24h). Atomic Lua scripts for compare-and-swap operations preventing race conditions.',risk:'Cache stampede on mass expiry — mitigated by probabilistic early expiry (PER algorithm): keys proactively refreshed with probability proportional to proximity to expiry.'},
+    pg:{role:'Storage — Azure Database for PostgreSQL',purpose:'Azure Database for PostgreSQL Flexible Server (zone-redundant HA) storing structured operational data: audit log, user preferences, A/B results, and model metrics. Read replicas for analytics queries. pg_partman manages monthly partitioning with automated archival to Delta Lake (ADLS) after 90 days.',tech:['Azure PostgreSQL Flexible Server (Zone-HA)','Zone-redundant automated failover (<60s)','Read replicas (analytics isolation)','pg_trgm (full-text search)'],sla:[{val:'99.99%',lbl:'Zone-redundant HA availability'},{val:'<60s',lbl:'Automated failover time'}],pattern:'CQRS: writes go to Flexible Server primary; analytics reads go to read replicas. pg_partman monthly partitions enable O(1) archival via partition detach.',risk:'Storage growth from high-volume audit logging — mitigated by pg_partman automated archival to Delta Lake (ADLS) after 90 days; cold storage 10x cheaper per GB.'},
+  }
+};
+let _cloud='aws';
+function switchCloud(p){
+  if(p===_cloud)return;
+  _cloud=p;
+  document.querySelectorAll('.cloud-btn').forEach(b=>b.classList.toggle('active',b.dataset.cloud===p));
+  const ov=CLOUD_LABELS[p]||{};
+  Object.entries(ov).forEach(([id,{label,sub}])=>{
+    const n=NODES.find(n=>n.id===id);if(n){n.label=label;n.sub=sub;}
+    const g=document.querySelector(`[data-node-id="${id}"]`);
+    if(g){const t=g.querySelectorAll('text');if(t[0])t[0].textContent=label;if(t[1])t[1].textContent=sub;}
+    const nb=document.querySelector(`.nnb[data-nav-id="${id}"] .nn-name`);if(nb)nb.textContent=label;
+  });
+  if(_sel)showDp(_sel);
 }
 
 init();
