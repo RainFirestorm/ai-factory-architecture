@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Architecture — AI Factory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050F0A;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;overflow:hidden;height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(52,211,153,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(52,211,153,.03) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+
+/* ── MAIN NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(5,15,10,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-left{display:flex;align-items:center;gap:12px;min-width:0}
+.back{color:#64748B;text-decoration:none;font-size:12px;white-space:nowrap;transition:color .2s}
+.back:hover{color:#E2E8F0}
+.vdiv{width:1px;height:20px;background:rgba(255,255,255,.1)}
+.nav-role{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#34D399;margin-bottom:2px}
+.nav-title{font-size:13px;font-weight:700;color:#F1F5F9;white-space:nowrap}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:#34D399;border-color:rgba(52,211,153,.28);background:rgba(52,211,153,.08)}
+
+/* ── LEGEND BAR ── */
+.legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(5,15,10,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#64748B;white-space:nowrap}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
+.leg-pulse{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:lp 1.5s infinite}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+/* ── MAIN SVG ── */
+svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116px)}
+
+/* ── NAV PANE ── */
+.np{position:fixed;top:116px;left:-248px;width:274px;height:calc(100vh - 116px);z-index:250;background:rgba(3,10,6,.97);border-right:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:left .38s cubic-bezier(.4,0,.2,1)}
+.np.open{left:0}
+.np-tab{position:absolute;top:50%;right:0;transform:translateY(-50%);width:26px;height:96px;cursor:pointer;background:rgba(52,211,153,.07);border-left:2px solid rgba(52,211,153,.2);border-radius:0 10px 10px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:all .2s}
+.np-tab:hover{background:rgba(52,211,153,.13)}
+.np-tab-txt{writing-mode:vertical-lr;text-orientation:mixed;font-size:7.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(52,211,153,.75);transform:rotate(180deg)}
+.np-tab-ico{font-size:12px;color:rgba(52,211,153,.5);transition:transform .35s}
+.np.open .np-tab-ico{transform:rotate(180deg)}
+.np-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.np-head-lbl{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:10px}
+.np-search{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:7px 10px 7px 30px;font-size:12px;color:#E2E8F0;outline:none;transition:all .2s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='rgba(255,255,255,.25)' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+.np-search:focus{border-color:rgba(52,211,153,.4);background-color:rgba(52,211,153,.06)}
+.np-search::placeholder{color:rgba(255,255,255,.2)}
+.np-body{flex:1;overflow-y:auto;padding-bottom:20px}
+.np-body::-webkit-scrollbar{width:3px}.np-body::-webkit-scrollbar-track{background:transparent}.np-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.nsh{display:flex;align-items:center;gap:7px;padding:10px 10px 5px;cursor:pointer;user-select:none;transition:background .15s}
+.nsh:hover{background:rgba(255,255,255,.03)}
+.nsh-bar{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.nsh-lbl{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;flex:1;color:rgba(255,255,255,.32)}
+.nsh-chev{font-size:9px;color:rgba(255,255,255,.18);transition:transform .25s}
+.nsh.col .nsh-chev{transform:rotate(-90deg)}
+.nsn{padding:0 5px 4px;display:flex;flex-direction:column;gap:2px}
+.nsn.hid{display:none}
+.nnb{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:transparent;transition:all .15s;text-align:left;width:100%}
+.nnb:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.07)}
+.nnb.sel{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3)}
+.nn-sw{width:28px;height:28px;border-radius:7px;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.nn-info{flex:1;min-width:0}
+.nn-name{font-size:11px;font-weight:700;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nn-role{font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+/* ── DETAIL PANEL ── */
+.dp{position:fixed;top:116px;right:-392px;width:382px;height:calc(100vh - 116px);z-index:250;background:rgba(3,10,6,.97);border-left:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:right .38s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.dp.open{right:0}
+.dp-hero{flex-shrink:0;height:104px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;overflow:hidden}
+.dp-hero-bg{position:absolute;inset:0}
+.dp-hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.3) 100%)}
+.dp-hero-txt{position:relative;z-index:1;min-width:0}
+.dp-hero-role{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}
+.dp-hero-name{font-size:18px;font-weight:900;color:#fff;line-height:1.05}
+.dp-hero-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:5px}
+.dp-close{position:absolute;top:10px;right:10px;z-index:2;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#94A3B8;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dp-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.dp-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.dp-body::-webkit-scrollbar{width:3px}.dp-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.dp-sl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:7px}
+.dp-purpose{font-size:12px;line-height:1.72;color:rgba(255,255,255,.68)}
+.dp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.dp-chip{padding:3px 9px;border-radius:100px;font-size:10.5px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.62)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.dp-metric{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px}
+.dp-mv{font-size:17px;font-weight:900;color:#fff;line-height:1}
+.dp-ml{font-size:9px;color:rgba(255,255,255,.36);margin-top:3px}
+.dp-pat{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.18);border-radius:10px;padding:11px 13px}
+.dp-pat-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(52,211,153,.55);margin-bottom:5px}
+.dp-pat-v{font-size:12px;font-weight:700;color:rgba(110,231,183,.9);line-height:1.5}
+.dp-conns{display:flex;flex-direction:column;gap:5px}
+.dp-conn{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .15s}
+.dp-conn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.13)}
+.dp-dir{font-size:7.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 6px;border-radius:100px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.dp-dir.in{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.25);color:#38BDF8}
+.dp-dir.out{background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.25);color:#FB923C}
+.dp-cn{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.72)}
+.dp-risk{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.16);border-radius:10px;padding:11px 13px}
+.dp-risk-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(248,113,113,.55);margin-bottom:5px}
+.dp-risk-v{font-size:11.5px;line-height:1.65;color:rgba(255,255,255,.6)}
+.no-conn{font-size:11px;color:rgba(255,255,255,.25);padding:6px 4px}
+.brief-bar{position:fixed;top:82px;left:0;right:0;z-index:185;height:34px;display:flex;align-items:center;padding:0 28px;gap:10px;background:rgba(255,255,255,.022);border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;color:rgba(255,255,255,.42);font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden}
+.brief-bar strong{color:rgba(255,255,255,.7);font-weight:600}
+.brief-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;opacity:.75}
+</style>
+</head>
+<body>
+
+<!-- MAIN NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="back">← Back</a>
+    <div class="vdiv"></div>
+    <div>
+      <div class="nav-role">Chief Data Officer</div>
+      <div class="nav-title">Data Architecture — AI Factory</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="01-technical.html"   class="nav-link">⚙ Technical</a>
+      <a href="02-application.html" class="nav-link">🔗 Application</a>
+      <a href="03-data.html"        class="nav-link active">🗄 Data</a>
+      <a href="04-business.html"    class="nav-link">📈 Business</a>
+    </div>
+  </div>
+</nav>
+
+<!-- LEGEND BAR -->
+<div class="legend-bar">
+  <div class="leg-item"><div class="leg-dot" style="background:#3B82F6"></div>Data Sources</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#F59E0B"></div>Ingestion</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FB923C"></div>Bronze — Raw</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#94A3B8"></div>Silver — Cleaned</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FCD34D"></div>Gold — Aggregated</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#C084FC"></div>AI / ML Layer</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#2DD4BF"></div>Serving</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FCA5A5"></div>Governance</div>
+  <div class="leg-sep"></div>
+  <div class="leg-item" style="color:#34D399"><div class="leg-pulse" style="background:#34D399"></div>Live data flow</div>
+</div>
+
+<!-- BRIEF -->
+<div class="brief-bar">
+  <div class="brief-dot" style="background:#34D399"></div>
+  Raw events land as immutable Bronze, get validated and cleaned to Silver, and aggregate to business-ready Gold — feeding real-time ML inference, BI reporting, and AI agents from a single source of truth. <strong>The end-to-end data platform.</strong>
+</div>
+
+<!-- NAV PANE -->
+<div class="np" id="np">
+  <div class="np-tab" onclick="toggleNp()">
+    <span class="np-tab-txt">Navigator</span>
+    <span class="np-tab-ico">◀</span>
+  </div>
+  <div class="np-head">
+    <div class="np-head-lbl">Data Pipeline Navigator</div>
+    <input class="np-search" id="np-search" placeholder="Search components…" autocomplete="off">
+  </div>
+  <div class="np-body" id="np-body"></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="dp" id="dp">
+  <div class="dp-hero" id="dp-hero">
+    <div class="dp-hero-bg" id="dp-hero-bg"></div>
+    <div class="dp-hero-ov"></div>
+    <div class="dp-hero-txt">
+      <div class="dp-hero-role" id="dp-role"></div>
+      <div class="dp-hero-name" id="dp-name"></div>
+      <div class="dp-hero-sub"  id="dp-sub"></div>
+    </div>
+    <button class="dp-close" onclick="closeDp()">✕</button>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<svg id="diagram" viewBox="0 0 1500 830" preserveAspectRatio="xMidYMid meet">
+<defs>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="nglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+  </filter>
+  <filter id="shadow">
+    <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+  </filter>
+  <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M 0,1 L 9,5 L 0,9 Z" fill="rgba(255,255,255,0.5)"/>
+  </marker>
+</defs>
+</svg>
+
+<script>
+const SECTIONS = [
+  {label:'DATA SOURCES',              rowStart:50,  rowH:122, strip:'rgba(59,130,246,.14)',  bar:'#3B82F6', lc:'rgba(147,197,253,.95)'},
+  {label:'INGESTION LAYER',           rowStart:172, rowH:122, strip:'rgba(245,158,11,.13)',  bar:'#F59E0B', lc:'rgba(253,211,77,.95)'},
+  {label:'DELTA LAKE — BRONZE (RAW)', rowStart:294, rowH:122, strip:'rgba(251,146,60,.13)',  bar:'#FB923C', lc:'rgba(253,186,116,.95)'},
+  {label:'SPARK PROCESSING',          rowStart:416, rowH:122, strip:'rgba(234,179,8,.13)',   bar:'#EAB308', lc:'rgba(253,224,71,.95)'},
+  {label:'DELTA LAKE — SILVER & GOLD',rowStart:538, rowH:116, strip:'rgba(100,116,139,.13)', bar:'#94A3B8', lc:'rgba(203,213,225,.95)'},
+  {label:'AI / ML LAYER',             rowStart:654, rowH:112, strip:'rgba(124,58,237,.13)',  bar:'#7C3AED', lc:'rgba(196,181,253,.95)'},
+  {label:'SERVING LAYER',             rowStart:766, rowH:64,  strip:'rgba(13,148,136,.13)',  bar:'#0D9488', lc:'rgba(153,246,228,.95)'},
+];
+
+// Governance sub-overlay
+const GOVERNANCE = {x:1050,y:294,w:410,h:190};
+
+const NODES = [
+  // SOURCES
+  {id:'src_api',  label:'APIs / REST',        sub:'External · Partner · Internal',x:170, y:84,  grad:['#1E3A8A','#2563EB'], stroke:'#60A5FA'},
+  {id:'src_db',   label:'Databases',          sub:'OLTP · CRM · ERP Systems',     x:400, y:84,  grad:['#1E3A8A','#1D4ED8'], stroke:'#93C5FD'},
+  {id:'src_file', label:'Object Store',       sub:'Files · S3 · ABFS · Parquet',  x:630, y:84,  grad:['#1E3A8A','#1E40AF'], stroke:'#60A5FA'},
+  {id:'src_str',  label:'Event Streams',      sub:'IoT · Clickstream · CDC',      x:860, y:84,  grad:['#1E3A8A','#1D4ED8'], stroke:'#93C5FD'},
+  // INGESTION
+  {id:'kafka',    label:'Apache Kafka',       sub:'Multi-AZ · 100K msg/s',        x:240, y:206, grad:['#451A03','#B45309'], stroke:'#FCD34D'},
+  {id:'sval',     label:'Schema Validator',   sub:'Great Expectations · PySpark',  x:570, y:206, grad:['#451A03','#92400E'], stroke:'#FCD34D'},
+  {id:'dwriter',  label:'Delta Writer',       sub:'ACID Commit · Idempotent',     x:900, y:206, grad:['#451A03','#B45309'], stroke:'#FACC15'},
+  {id:'audit',    label:'Audit Log',          sub:'Access · PII · Compliance',    x:1220,y:206, grad:['#450A0A','#991B1B'], stroke:'#FCA5A5'},
+  // BRONZE
+  {id:'bronze',   label:'Delta Bronze',       sub:'Raw · Immutable · 30 TB',      x:280, y:328, grad:['#431407','#9A3412'], stroke:'#FB923C', w:175},
+  {id:'txlog',    label:'Transaction Log',    sub:'ACID · Time Travel · Versioning',x:620,y:328, grad:['#431407','#7C2D12'], stroke:'#FED7AA'},
+  // GOVERNANCE
+  {id:'dlp',      label:'DLP Engine',         sub:'PII Detection · Masking',      x:1120,y:328, grad:['#450A0A','#7F1D1D'], stroke:'#FCA5A5'},
+  {id:'catalog',  label:'Data Catalog',       sub:'Unity Catalog · Lineage',      x:1340,y:328, grad:['#450A0A','#991B1B'], stroke:'#FCA5A5'},
+  // PROCESSING
+  {id:'etl',      label:'Spark ETL',          sub:'Distributed · Fault Tolerant', x:220, y:450, grad:['#713F12','#A16207'], stroke:'#FACC15'},
+  {id:'feat_eng', label:'Feature Engineering',sub:'PySpark · Window Functions',   x:560, y:450, grad:['#713F12','#B45309'], stroke:'#FCD34D', w:178},
+  {id:'ml_train', label:'ML Training',        sub:'Databricks AutoML · Custom',   x:920, y:450, grad:['#14532D','#166534'], stroke:'#4ADE80'},
+  {id:'batch',    label:'Batch Aggregation',  sub:'Daily · Weekly Rollups',       x:1240,y:450, grad:['#14532D','#15803D'], stroke:'#86EFAC'},
+  // SILVER / GOLD
+  {id:'silver',   label:'Delta Silver',       sub:'Cleaned · Validated · Joined', x:250, y:572, grad:['#1E293B','#334155'], stroke:'#94A3B8', w:172},
+  {id:'gold',     label:'Delta Gold',         sub:'Business Aggregates · KPIs',   x:600, y:572, grad:['#713F12','#B45309'], stroke:'#FCD34D', w:168},
+  {id:'fstore',   label:'Feature Store',      sub:'Online + Offline · Point-in-time',x:950,y:572,grad:['#065F46','#059669'],stroke:'#34D399',w:175},
+  {id:'warehouse',label:'SQL Warehouse',      sub:'Databricks SQL · BI Connect',  x:1280,y:572, grad:['#14532D','#15803D'], stroke:'#4ADE80'},
+  // AI/ML
+  {id:'vectors',  label:'Vector DB / FAISS',  sub:'Embeddings · ANN Search',      x:230, y:688, grad:['#3B0764','#6D28D9'], stroke:'#C084FC', w:172},
+  {id:'embedsvc', label:'Embedding Service',  sub:'Semantic Search · RAG',        x:560, y:688, grad:['#3B0764','#7E22CE'], stroke:'#A78BFA'},
+  {id:'mlflow',   label:'MLflow Registry',    sub:'Production · Staging · Shadow',x:890, y:688, grad:['#065F46','#059669'], stroke:'#34D399', w:172},
+  {id:'models',   label:'Trained Models',     sub:'LightGBM · XGBoost · Custom',  x:1220,y:688, grad:['#14532D','#166534'], stroke:'#4ADE80'},
+  // SERVING
+  {id:'infer',    label:'Inference API',      sub:'Real-time · <100ms P99',       x:250, y:792, grad:['#134E4A','#0D9488'], stroke:'#2DD4BF'},
+  {id:'search',   label:'Search / RAG',       sub:'Retrieval Augmented Gen.',     x:570, y:792, grad:['#134E4A','#047857'], stroke:'#34D399'},
+  {id:'dashsrv',  label:'BI Dashboards',      sub:'Grafana · Databricks SQL',     x:890, y:792, grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8'},
+  {id:'agents',   label:'AI Agents',          sub:'Claude Orchestrator · Tools',  x:1210,y:792, grad:['#3B0764','#6D28D9'], stroke:'#C084FC'},
+];
+
+const EDGES = [
+  {from:'src_api',  to:'kafka',   color:'#60A5FA', dur:2.0, begin:0.0},
+  {from:'src_db',   to:'kafka',   color:'#60A5FA', dur:2.0, begin:0.5},
+  {from:'src_file', to:'kafka',   color:'#60A5FA', dur:2.0, begin:1.0},
+  {from:'src_str',  to:'kafka',   color:'#93C5FD', dur:1.5, begin:0.3, path:'M 860,112 C 860,158 240,158 240,178'},
+  {from:'kafka',    to:'sval',    color:'#FCD34D', dur:1.8, begin:0.0},
+  {from:'sval',     to:'dwriter', color:'#FACC15', dur:1.8, begin:0.0},
+  {from:'dwriter',  to:'audit',   color:'#FCA5A5', dur:2.0, begin:0.5, dashed:true, dots:1},
+  {from:'dwriter',  to:'bronze',  color:'#FB923C', dur:2.0, begin:0.0},
+  {from:'bronze',   to:'txlog',   color:'#FED7AA', dur:2.0, begin:0.5, path:'M 368,328 C 460,315 530,315 538,328'},
+  {from:'dwriter',  to:'dlp',     color:'#FCA5A5', dur:2.5, begin:1.0, path:'M 900,234 C 1000,270 1080,295 1120,300', dashed:true, dots:1},
+  {from:'dlp',      to:'catalog', color:'#FCA5A5', dur:2.0, begin:0.5, path:'M 1203,328 C 1250,315 1290,315 1257,328'},
+  {from:'bronze',   to:'etl',     color:'#FACC15', dur:2.0, begin:0.0},
+  {from:'etl',      to:'feat_eng',color:'#FCD34D', dur:2.0, begin:0.5, path:'M 303,450 C 400,437 470,437 478,450'},
+  {from:'etl',      to:'ml_train',color:'#4ADE80', dur:2.5, begin:0.5, path:'M 303,450 C 500,490 700,490 920,422'},
+  {from:'etl',      to:'batch',   color:'#86EFAC', dur:2.5, begin:1.0, path:'M 303,450 C 600,510 900,510 1240,422'},
+  {from:'feat_eng', to:'silver',  color:'#94A3B8', dur:2.0, begin:0.0},
+  {from:'feat_eng', to:'gold',    color:'#FCD34D', dur:2.0, begin:0.7},
+  {from:'feat_eng', to:'fstore',  color:'#34D399', dur:2.0, begin:1.4},
+  {from:'ml_train', to:'mlflow',  color:'#34D399', dur:2.0, begin:0.0},
+  {from:'batch',    to:'warehouse',color:'#4ADE80',dur:2.0, begin:0.5},
+  {from:'silver',   to:'fstore',  color:'#34D399', dur:2.5, begin:0.5, path:'M 336,572 C 550,572 600,572 868,572'},
+  {from:'gold',     to:'warehouse',color:'#4ADE80',dur:2.5, begin:1.0, path:'M 684,572 C 900,572 1000,572 1197,572'},
+  {from:'fstore',   to:'vectors', color:'#C084FC', dur:2.0, begin:0.0, path:'M 950,600 C 950,650 230,650 230,660'},
+  {from:'fstore',   to:'embedsvc',color:'#A78BFA', dur:2.0, begin:0.7, path:'M 950,600 C 950,645 560,645 560,660'},
+  {from:'mlflow',   to:'models',  color:'#4ADE80', dur:2.0, begin:0.0, path:'M 972,688 C 1050,675 1150,675 1137,688'},
+  {from:'vectors',  to:'search',  color:'#A78BFA', dur:2.0, begin:0.0, path:'M 230,716 C 230,760 570,760 570,764'},
+  {from:'embedsvc', to:'search',  color:'#34D399', dur:2.0, begin:0.5},
+  {from:'models',   to:'infer',   color:'#2DD4BF', dur:2.0, begin:0.0, path:'M 1220,716 C 1220,760 250,760 250,764'},
+  {from:'mlflow',   to:'infer',   color:'#2DD4BF', dur:2.5, begin:1.0, path:'M 890,716 C 890,760 250,760 250,764'},
+  {from:'warehouse',to:'dashsrv', color:'#38BDF8', dur:2.5, begin:0.5, path:'M 1280,600 C 1280,720 890,720 890,764'},
+  {from:'infer',    to:'agents',  color:'#C084FC', dur:2.5, begin:0.5, path:'M 332,792 C 600,810 1000,810 1127,792'},
+  {from:'search',   to:'agents',  color:'#C084FC', dur:2.5, begin:1.2, path:'M 652,792 C 800,810 1000,810 1127,792'},
+];
+
+const NODE_DETAILS = {
+  src_api:{role:'Data Source — REST / GraphQL APIs',purpose:'External, partner, and internal REST/GraphQL API connectors stream operational data into the ingestion layer. OAuth 2.0 secures all endpoints; exponential-backoff retry logic with circuit breakers handles transient failures. Request deduplication via idempotency keys prevents duplicate records during retry windows. Supports both synchronous pull (polling) and push (webhook) modes.',tech:['OAuth2 / OpenID Connect','HTTP/2 + gRPC connectors','OpenAPI 3.1 contract validation','Circuit breaker (Polly/tenacity)'],sla:[{val:'<200ms',lbl:'Ingest latency P99'},{val:'99.5%',lbl:'Source availability SLA'}],pattern:'Adapter pattern normalizes heterogeneous API schemas into a canonical internal envelope before Kafka publish. New source onboarding = new adapter class; no changes to downstream pipeline.',risk:'API deprecation breaking ingest pipeline — mitigated by schema versioning, contract tests run in CI against source API sandbox, and 90-day deprecation notice requirement in SLA agreements.'},
+  src_db:{role:'Data Source — Operational Databases',purpose:'JDBC/ODBC connectors capture change data from OLTP, CRM, and ERP databases using Debezium Change Data Capture (CDC). CDC captures row-level inserts, updates, and deletes from the WAL/binlog without impacting source query performance. Full snapshots on first run; incremental CDC thereafter.',tech:['Debezium CDC (Postgres/MySQL WAL)','JDBC bulk extraction (initial load)','Avro serialization + Schema Registry','Watermark-based incremental sync'],sla:[{val:'<30s',lbl:'CDC lag P99'},{val:'Exactly-once',lbl:'Delivery semantic'}],pattern:'Log-based CDC eliminates costly polling queries against source OLTP. Change events emitted to Kafka topics partitioned by entity key for ordered processing per entity.',risk:'Source database WAL retention expiry losing CDC position — mitigated by monitoring WAL consumption lag; alert at 70% retention window; automatic full re-snapshot on position loss with backfill protection.'},
+  src_file:{role:'Data Source — Object Storage',purpose:'Batch file ingestion from S3 (AWS), ADLS Gen2 (Azure), and GCS (GCP) using Spark structured streaming on file arrival events. Supports Parquet, ORC, JSON, CSV, and Avro. Checkpointing tracks processed file offsets, enabling exactly-once processing even after restarts.',tech:['Spark Structured Streaming (file source)','S3/ADLS event notifications','Delta Lake checkpointing','Parquet · ORC · Avro format support'],sla:[{val:'<5min',lbl:'File-to-Bronze latency'},{val:'Exactly-once',lbl:'File processing semantic'}],pattern:'Micro-batch file processing: new file events trigger a Spark job that reads, validates, and appends to Bronze. File manifest tracking prevents reprocessing on job restart.',risk:'Schema drift in upstream file exports breaking ingestion — mitigated by schema inference at Bronze layer (schema-on-read); breaking changes caught by Great Expectations data quality checks before Silver promotion.'},
+  src_str:{role:'Data Source — Real-time Event Streams',purpose:'IoT sensor telemetry, user clickstream, and application CDC events arrive as continuous Kafka streams. High-frequency sources (IoT) use binary MQTT-to-Kafka bridge for minimal latency. Consumer group isolation ensures stream processing does not impact batch workloads sharing the same Kafka cluster.',tech:['MQTT bridge (IoT → Kafka)','Kafka Streams (real-time aggregation)','Consumer group isolation','Avro schemas + Schema Registry'],sla:[{val:'<500ms',lbl:'Event-to-Kafka P99'},{val:'100K+',lbl:'Events/second throughput'}],pattern:'Event-driven streaming with backpressure: Kafka\'s consumer group lag metric drives auto-scaling of consumer pods (KEDA). Separate topics per event type prevent head-of-line blocking.',risk:'Message ordering violation on partition rebalancing — mitigated by sticky partition assignment (cooperative rebalancer); entity key-based partitioning guarantees per-entity order even across rebalances.'},
+  kafka:{role:'Message Queue — Apache Kafka',purpose:'The event backbone of the entire data platform. Multi-AZ Kafka cluster (3 brokers, replication factor 3) provides durable, ordered, at-least-once event delivery at 100K+ msg/s. Schema Registry enforces Avro contracts, preventing schema-incompatible events from reaching consumers. Dead-letter topics capture deserialization failures for inspection.',tech:['Apache Kafka 3.x (Confluent Cloud)','Schema Registry (Avro + JSON Schema)','KEDA autoscaling on consumer lag','Dead-letter topic per consumer group'],sla:[{val:'<10ms',lbl:'Produce latency P99'},{val:'7 days',lbl:'Message retention'}],pattern:'Topic-per-entity-type with key-based partitioning guarantees processing order per entity. Compacted topics maintain latest state for lookup-style consumers without full replay.',risk:'Kafka cluster split-brain on network partition — mitigated by Zookeeper quorum requiring 2/3 nodes; unclean leader election disabled (guaranteed no data loss on failover, may cause brief unavailability).'},
+  sval:{role:'Data Quality Gate — Schema Validator',purpose:'Every Kafka message passes through Great Expectations-powered validation before any write to Bronze. Checks: schema conformance, null constraints, referential integrity spot-checks, statistical distribution bounds (e.g., price > 0), and row-count thresholds. Failed records routed to quarantine topic with full context; never silently dropped.',tech:['Great Expectations (data quality)','PySpark streaming validation','Quarantine topic (DLQ)','Validation result store (PostgreSQL)'],sla:[{val:'<50ms',lbl:'Validation overhead P99'},{val:'>99.5%',lbl:'Data quality pass rate'}],pattern:'Fail-fast quality gate: validation runs before any storage write. Quality metrics published to Prometheus; dashboards show pass/fail rate trends. Monthly data quality SLA reviewed with source teams.',risk:'Overly strict validation blocking valid but unexpected data during source system changes — mitigated by quarantine (never drop) approach; ops team reviews quarantine daily; temporary rule relaxation possible without code deploy.'},
+  dwriter:{role:'Delta Lake Writer — ACID Commit Engine',purpose:'Writes validated events to Delta Lake Bronze tables with ACID guarantees. Idempotent upserts via MERGE on deduplication key prevent duplicate records during retry windows. Handles concurrent writes from multiple ingestion pods via optimistic concurrency control in Delta\'s transaction log. Auto-compaction merges small files every 100 commits.',tech:['Delta Lake 3.x ACID MERGE','Optimistic concurrency control','Auto-compaction (OPTIMIZE)','Liquid clustering for query optimization'],sla:[{val:'Exactly-once',lbl:'Write semantic'},{val:'<2s',lbl:'Commit latency P99'}],pattern:'Write-ahead log (WAL) pattern: Delta transaction log records all pending writes before applying. Failed writes leave no partial state; retry is safe. MERGE key = (source_id, event_ts) for deduplication.',risk:'Write amplification from small files degrading query performance — mitigated by auto-compaction (OPTIMIZE) triggered every 100 commits; Z-ORDER clustering by frequently-queried columns (user_id, event_date).'},
+  audit:{role:'Compliance Audit Log',purpose:'Immutable, append-only audit trail of all data access events: who read/wrote what data, when, and from which IP. Separate Kafka topic with infinite retention (compliance requirement). Stores PII access events for GDPR Article 30 processing records and CCPA audit requirements. Never purged; archived to cold storage after 90 days.',tech:['Kafka (infinite retention topic)','Structured log format (Avro)','Cold archive (S3 Glacier after 90d)','Immutable (no delete/modify)'],sla:[{val:'100%',lbl:'Event capture rate'},{val:'7 years',lbl:'Compliance retention'}],pattern:'Event sourcing for compliance: every data operation emits an immutable audit event. Log is the truth; no separate audit database. Query via Athena/Databricks SQL for regulatory investigations.',risk:'Audit log volume growing unmanageable — mitigated by structured fields enabling efficient columnar compression (10x space savings); separate audit Kafka cluster prevents audit write failures from impacting primary pipeline.'},
+  bronze:{role:'Delta Lake Bronze — Raw Immutable Layer',purpose:'The raw, unmodified copy of all source data. Bronze is write-once: no transforms, no schema enforcement beyond what Kafka schema validation already checked. Full historical fidelity enables re-processing with corrected business logic. Delta time travel allows querying any point in history — critical for debugging and regulatory audit.',tech:['Delta Lake 3.x (Bronze tables)','Schema-on-read (flexible)','Time travel (30-day retention)','Partitioned by event_date'],sla:[{val:'30 TB',lbl:'Current data volume'},{val:'30 days',lbl:'Time travel depth'}],pattern:'Immutable append-only Bronze: never delete or modify source records. All corrections applied downstream in Silver via MERGE, preserving full audit lineage. Bronze is the "single source of truth" for replay.',risk:'Runaway data growth from high-cardinality sources — mitigated by automated partition pruning (remove partitions > retention SLA); per-source quota enforcement alerts at 80% of allocated Bronze storage.'},
+  txlog:{role:'Delta Transaction Log (Write-Ahead Log)',purpose:'The Delta Lake transaction log records every table modification as an atomic JSON commit entry. Provides ACID semantics: either the entire write commits or nothing does. Powers time-travel queries by maintaining a complete history of all table versions. Checkpoint files created every 10 commits for efficient log replay.',tech:['Delta Transaction Log (JSON)','Checkpoint files (Parquet, every 10 tx)','Optimistic concurrency control','Log compaction (auto-vacuum)'],sla:[{val:'Atomic',lbl:'Write atomicity guarantee'},{val:'<100ms',lbl:'Commit log write P99'}],pattern:'Write-ahead log: all mutations logged before data files written. Log is the canonical truth; data files are derived. On reader crash, log replay restores consistent state with no manual intervention.',risk:'Transaction log accumulation slowing table operations — mitigated by automatic log compaction (VACUUM) retaining configurable days; checkpoint files allow readers to skip full log replay.'},
+  dlp:{role:'Data Loss Prevention Engine',purpose:'Scans all data written to Bronze for PII patterns (SSN, credit card, email, phone, IP addresses) using a combination of regex patterns and NER (Named Entity Recognition) models. Detected PII is automatically masked, tokenized, or encrypted based on data classification policy. Findings logged to the compliance audit trail.',tech:['Microsoft Presidio (PII detection)','spaCy NER models (name/org)','Column-level encryption (AES-256)','Tokenization vault (Databricks Secrets)'],sla:[{val:'>99.5%',lbl:'PII detection recall'},{val:'<100ms',lbl:'Scan latency per record'}],pattern:'Policy-as-code: DLP rules version-controlled in Git. Column classification stored in Unity Catalog as column tags. Row-level masking applied transparently at query time for unauthorized readers.',risk:'False negatives allowing PII through undetected — mitigated by multi-layer detection (regex + ML); weekly adversarial test suites; penetration testing of anonymization quality by privacy engineering team.'},
+  catalog:{role:'Data Catalog — Unity Catalog',purpose:'Databricks Unity Catalog provides centralized governance for all Delta Lake tables: column-level access control, data lineage (automatic tracking of column transformations), business glossary, and quality annotations. Single control plane across all workspace and cloud environments. Enables self-service analytics with guardrails.',tech:['Databricks Unity Catalog','Column-level access control (ABAC)','Automatic data lineage (column-level)','Business glossary + owner metadata'],sla:[{val:'Column-level',lbl:'Access control granularity'},{val:'Automatic',lbl:'Lineage tracking (no manual tags)'}],pattern:'Attribute-based access control: permissions evaluated at query time against user attributes (team, role, data classification). No per-user permission management — policies applied to groups.',risk:'Data access policy sprawl making permissions unmanageable — mitigated by policy-as-code (Terraform for Unity Catalog grants); quarterly access reviews automated with stale-access detection.'},
+  etl:{role:'Distributed ETL — Apache Spark',purpose:'Apache Spark 3.5 on Databricks ML Runtime handles all large-scale data transformations: Bronze → Silver joins, deduplication, type coercion, and data quality remediation. Photon vectorized execution engine delivers 10x performance over OSS Spark for aggregations. Adaptive Query Execution (AQE) automatically optimizes skewed data distributions.',tech:['Apache Spark 3.5 + Photon engine','Databricks ML Runtime 14','AQE (skew handling)','Delta Lake MERGE for upserts'],sla:[{val:'<30 min',lbl:'30 TB nightly ETL'},{val:'64 CPUs',lbl:'Max auto-scale pool'}],pattern:'Lambda architecture: Spark batch layer produces accurate historical Silver/Gold; Kafka Streams speed layer produces near-real-time approximations. Weekly reconciliation corrects speed layer data quality issues.',risk:'Data skew on high-cardinality join keys (hot users/products) causing executor OOM — mitigated by AQE skew join optimization; salted join keys for known hot entities; broadcast joins for small-dimension tables.'},
+  feat_eng:{role:'Feature Engineering Pipeline',purpose:'Transforms raw Silver data into ML-ready feature vectors using PySpark window functions, time-based aggregations, and entity-level statistics. Features registered in the Databricks Feature Store with point-in-time semantics, ensuring training and serving use identical computations — eliminating training-serving skew.',tech:['PySpark window functions','Databricks Feature Store (offline)','Point-in-time join logic','Feature versioning (semantic versioning)'],sla:[{val:'<5 min',lbl:'Feature freshness SLA'},{val:'100%',lbl:'Train/serve parity'}],pattern:'Feature store as single source of truth: same PySpark transformation code used for both offline training batch and online serving lookup. Version bumps trigger automatic recompute of dependent features.',risk:'Feature staleness during upstream pipeline delay causing prediction drift — mitigated by freshness monitoring dashboard; alert at >2x normal pipeline delay; model confidence degrades gracefully on stale features rather than failing.'},
+  ml_train:{role:'Model Training — Databricks AutoML & Custom',purpose:'Databricks AutoML explores 10+ algorithm families (LightGBM, XGBoost, CatBoost, neural nets) in parallel on the Spark cluster, logging all experiments to MLflow. Custom model training supports PyTorch/TensorFlow for deep learning use cases. Automated hyperparameter tuning via Optuna bayesian optimization.',tech:['Databricks AutoML (10+ algorithms)','Optuna bayesian hyperparameter tuning','MLflow experiment tracking','Feature Store training API (point-in-time)'],sla:[{val:'<2h',lbl:'Standard model training run'},{val:'>0.85 AUC',lbl:'Minimum production threshold'}],pattern:'GitOps ML: model training triggered by feature store version bump or data drift alert. All experiments logged; only models passing threshold promoted to staging. Training job definition version-controlled in Git.',risk:'Model training on future data (data leakage) invalidating results — architecturally prevented by Feature Store point-in-time joins; lookback windows explicitly bounded by label timestamp.'},
+  batch:{role:'Batch Aggregation Engine',purpose:'Computes daily and weekly business KPI rollups from Silver/Gold data: cohort analysis, revenue attribution, funnel metrics, and churn predictions. Results written to Gold tables and SQL Warehouse. Schedule-based execution via Databricks Workflows with dependency tracking; upstream table freshness checked before trigger.',tech:['Databricks Workflows (DAG scheduler)','Delta Lake Gold table writes','SQL-based aggregation (dbt models)','Dependency-aware scheduling'],sla:[{val:'Complete by 6AM',lbl:'Daily batch SLA'},{val:'<30 min',lbl:'Critical KPI computation time'}],pattern:'dbt transformation layer: SQL models define Gold table business logic, version-controlled in Git, tested with dbt tests before deployment. Lineage from source table to KPI metric fully traceable.',risk:'Upstream Silver table delay cascading to missed KPI SLA — mitigated by parallel execution where dependencies allow; priority lanes for executive dashboard KPIs; SLA breach alert with 30-min early warning.'},
+  silver:{role:'Delta Silver — Validated & Enriched Layer',purpose:'Cleaned, deduplicated, validated, and schema-enforced version of Bronze data. PII masking applied at this layer makes Silver the primary tier for most analytics consumers. Schema evolution managed via Delta\'s column mapping: additive changes are backward compatible; breaking changes require explicit migration.',tech:['Delta Lake 3.x (Silver tables)','Column mapping (schema evolution)','MERGE for SCD Type 2 slowly-changing dims','Row-level security (Unity Catalog)'],sla:[{val:'Schema-enforced',lbl:'Data quality guarantee'},{val:'SCD Type 2',lbl:'Historical dimension tracking'}],pattern:'SCD Type 2 for mutable dimensions (customer address, product price): when attributes change, old row closed with end_date, new row inserted. Full history preserved for point-in-time analysis.',risk:'Schema evolution breaking downstream consumers on column rename — mitigated by column mapping (logical rename without physical rename); consumer-facing views add backward-compatibility shim; breaking changes require 30-day notice.'},
+  gold:{role:'Delta Gold — Business Aggregate Layer',purpose:'Pre-aggregated, business-oriented data sets optimized for BI consumption and executive reporting. Gold tables are read-optimized with Z-ORDER clustering on frequently filtered columns, liquid clustering for query pattern adaptation, and materialized views for the most common dashboard queries.',tech:['Delta Lake Gold (business aggregates)','Z-ORDER + liquid clustering','Materialized views (auto-refresh)','Photon-optimized storage format'],sla:[{val:'<2s',lbl:'Interactive BI query P50'},{val:'Daily refresh',lbl:'Standard Gold update cadence'}],pattern:'Medallion architecture culmination: Gold tables are the curated, trusted, business-aligned layer. Changes require data governance review. Gold is what executives and BI teams see.',risk:'Gold table compute cost growing with data volume — mitigated by partition pruning, result caching, and materialized views absorbing repetitive query patterns; cost attribution per department via Databricks cost tagging.'},
+  fstore:{role:'Feature Store — Online + Offline Serving',purpose:'Databricks Feature Store eliminates training-serving skew — the #1 cause of production ML failures — by sharing identical feature transformation code for both model training (offline, batch) and production inference (online, real-time). Online store (DynamoDB) delivers <10ms P99 for real-time lookups. Offline store (Delta Lake) enables point-in-time correct training joins.',tech:['Databricks Feature Store','DynamoDB online store (<10ms P99)','Delta Lake offline store','Point-in-time joins for training'],sla:[{val:'<10ms',lbl:'Online feature lookup P99'},{val:'<5 min',lbl:'Feature freshness SLA'}],pattern:'Single feature definition, dual execution path: one PySpark function runs during batch training (offline) and online serving (real-time). No separate ETL pipelines for online store — eliminates drift by construction.',risk:'Feature staleness during upstream pipeline delay — mitigated by freshness SLA monitoring; feature groups publish staleness metadata; downstream models inspect feature timestamps and degrade confidence score when stale.'},
+  warehouse:{role:'SQL Warehouse — Databricks Serverless',purpose:'Databricks SQL Serverless provides a serverless Photon-powered query engine for BI workloads. Auto-scales from 0 to 50 clusters in seconds. Row-level security filters data to tenant scope transparently. Result cache delivers <100ms for repeated dashboard queries. Separate warehouses for production workloads vs BI to prevent interference.',tech:['Databricks SQL Serverless','Photon columnar engine (10x faster)','Row-level security (Unity Catalog)','Result cache (24h TTL)'],sla:[{val:'<2s',lbl:'Interactive query P50'},{val:'Serverless',lbl:'0-to-50 cluster scale'}],pattern:'Consumption-based pricing: zero cost when idle; instant scale-out for bursts. ANSI SQL with Delta Lake extensions (MERGE, TIME TRAVEL). Dedicated warehouses per workload prevent noisy-neighbor interference.',risk:'BI query saturating warehouse and impacting production scoring — mitigated by dedicated warehouses per workload type; 300s query timeout kills runaway queries; warehouse concurrency cap prevents oversubscription.'},
+  vectors:{role:'Vector Database — FAISS / Embedded',purpose:'FAISS (Facebook AI Similarity Search) index stored in-pod and on Delta Lake enables sub-millisecond approximate nearest-neighbor (ANN) search for semantic retrieval. Index built from embedding vectors of product descriptions, user preference histories, and knowledge base articles. Rebuilt nightly from Delta Lake; hot-swapped atomically without search downtime.',tech:['FAISS IndexIVFPQ (ANN index)','Delta Lake (index persistence)','Atomic hot-swap (zero-downtime rebuild)','IVF + PQ compression (10x smaller)'],sla:[{val:'<20ms',lbl:'ANN search P99 (top-100)'},{val:'Nightly',lbl:'Index rebuild cadence'}],pattern:'Index-as-code: FAISS index parameters (nlist, nprobe) stored in Git. Index quality evaluated on recall@100 against held-out golden set after each rebuild; automatic rollback if recall drops >5%.',risk:'FAISS index staleness causing semantic drift as new products/documents are added — mitigated by incremental index updates using FAISS\'s ID map; nightly full rebuild for accuracy guarantee.'},
+  embedsvc:{role:'Embedding Service',purpose:'Generates dense vector representations from text, images, and structured data using transformer models (sentence-transformers, CLIP). Serves both batch embedding (for FAISS index rebuild) and online embedding (for real-time query vectorization). GPU-accelerated for production; CPU fallback for DR.',tech:['Sentence-Transformers (text)','CLIP (image + text)','TorchServe (model serving)','Batch + real-time inference modes'],sla:[{val:'<50ms',lbl:'Single embedding P99'},{val:'<5s',lbl:'Batch of 1000 embeddings'}],pattern:'Model versioning: embedding model version pinned per FAISS index version. Index and embedding service always use same model version — prevents retrieval quality degradation from embedding drift.',risk:'Embedding model update breaking semantic search quality — mitigated by A/B evaluation before deployment: new model must achieve equal or better recall@100 on held-out query set before any traffic is shifted.'},
+  mlflow:{role:'MLflow Model Registry — Production Lifecycle',purpose:'Central registry for all trained models across the AI Factory. Tracks full experiment lineage from training data version → features used → hyperparameters → evaluation metrics. Manages model lifecycle: development → staging → canary (5% traffic) → production → archived. Required for financial services SR 11-7 model risk management.',tech:['MLflow 2.x','Delta Lake artifact storage','Automated model cards (fairness + accuracy)','Champion/Challenger framework'],sla:[{val:'0-downtime',lbl:'Model promotion strategy'},{val:'Auto-rollback',lbl:'On >5% accuracy degradation'}],pattern:'GitOps model promotion: model PR triggers shadow scoring → 95% statistical significance test → canary 5% → full production. Automated rollback if accuracy degrades within 1 hour of promotion.',risk:'Silent model performance degradation after distribution shift — mitigated by Evidently AI drift monitoring (PSI > 0.2 triggers retraining alert); weekly holdout validation against recent ground truth labels.'},
+  models:{role:'Trained Production Models',purpose:'LightGBM and XGBoost models for tabular prediction tasks (churn, propensity, fraud); custom PyTorch networks for sequence and embedding tasks. All models registered in MLflow with auto-generated model cards documenting: training data, feature importance, fairness metrics across demographic groups, and performance benchmarks.',tech:['LightGBM (tabular prediction)','XGBoost (gradient boosting)','SHAP (explainability)','PyTorch (deep learning tasks)'],sla:[{val:'<200ms',lbl:'Single inference P99'},{val:'>0.85 AUC',lbl:'Minimum production quality bar'}],pattern:'Champion/Challenger: production model serves 95% traffic; challenger serves 5%. After 7 days with ≥0.5% lift, challenger auto-promoted. Prevents premature promotion; ensures statistically significant comparison.',risk:'Model fairness issues producing discriminatory outcomes — mitigated by Fairlearn bias evaluation as part of promotion gate; models with >5% performance gap across protected groups blocked from promotion until bias addressed.'},
+  infer:{role:'Inference API — Real-time Scoring',purpose:'Low-latency REST endpoint for real-time ML predictions. Supports single-entity and micro-batch (up to 100) scoring. Loads models from MLflow registry at startup; hot-reload on model version promotion without pod restart. Feature lookup from Feature Store online tier integrated transparently.',tech:['FastAPI + uvicorn (ASGI)','MLflow Model Serving integration','Feature Store online lookup (DynamoDB)','ONNX runtime (CPU optimized inference)'],sla:[{val:'<100ms',lbl:'Single prediction P99'},{val:'<500ms',lbl:'Batch 100 predictions P99'}],pattern:'Sidecar pattern: feature lookup and model inference run in separate containers sharing localhost network. Feature staleness check runs before inference; stale features degrade confidence score rather than blocking response.',risk:'Model cold-start on first request after pod restart — mitigated by model pre-loading at startup (no lazy init); liveness probe gates traffic until model is loaded; min 1 warm pod always running.'},
+  search:{role:'Search & Retrieval-Augmented Generation',purpose:'Combines FAISS vector search with BM25 lexical search (hybrid retrieval) to find the most semantically and lexically relevant context for Claude Orchestrator. Retrieved context passed to Claude with query for grounded generation. Re-ranking step using a cross-encoder model boosts precision before top-K context selection.',tech:['FAISS ANN (semantic search)','Elasticsearch BM25 (lexical search)','Cross-encoder reranker','Reciprocal rank fusion (score merging)'],sla:[{val:'<100ms',lbl:'Hybrid search P99 (top-10)'},{val:'>90%',lbl:'Relevance precision@10'}],pattern:'Hybrid retrieval fusion: vector search recalls semantically relevant items; BM25 catches exact-match keywords. Reciprocal rank fusion merges both result lists before cross-encoder reranking for final top-K.',risk:'RAG quality degradation as knowledge base grows stale — mitigated by freshness metadata in each document chunk; Claude instructed to indicate when retrieved context appears outdated; nightly incremental index rebuild.'},
+  dashsrv:{role:'BI Dashboard Serving',purpose:'Grafana and Databricks SQL dashboards provide real-time operational monitoring (latency, error rates, throughput) and business intelligence (revenue, engagement, cohort trends). Dashboards served from result cache for fast load times. Row-level security restricts data to viewer\'s organizational scope.',tech:['Grafana (operational dashboards)','Databricks SQL (BI dashboards)','Result cache (24h TTL)','Row-level security (Unity Catalog)'],sla:[{val:'<2s',lbl:'Dashboard load time P99'},{val:'Real-time',lbl:'Operational metrics refresh'}],pattern:'Separate OLAP and operational dashboard layers: Grafana for time-series operational metrics (Prometheus-backed); Databricks SQL for business intelligence (Delta Lake-backed). No cross-contamination of workloads.',risk:'Dashboard queries overloading Delta Lake during peak business hours — mitigated by dedicated SQL warehouse for BI workloads; pre-computed Gold table aggregates absorb most query load; result cache handles repeat loads.'},
+  agents:{role:'AI Agent Consumers',purpose:'Claude Orchestrator and multi-agent systems consume all layers of the data platform as tools: SQL queries against the warehouse, feature lookups from the Feature Store, vector search for RAG context, and model predictions from the Inference API. Agents represent the AI consumption layer that transforms raw data value into business outcomes.',tech:['Claude Orchestrator (tool use)','SQL tool (Databricks SQL)','Feature tool (Feature Store API)','RAG tool (FAISS + Elasticsearch)'],sla:[{val:'<5s',lbl:'End-to-end agent workflow P99'},{val:'Tool-first',lbl:'Data access architecture'}],pattern:'Tool-based data access: agents never access data directly; all queries go through typed tool interfaces with rate limiting and audit logging. Prevents agents from running expensive uncontrolled queries against production data.',risk:'Agent issuing expensive analytical query against production Inference API — architecturally prevented by tool interfaces with query cost estimation; expensive operations redirected to async batch path with estimated completion time returned.'},
+};
+
+let _sel=null, eg, ng, dg;
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('diagram');
+function mk(t,a={}){const e=document.createElementNS(NS,t);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+
+function init(){
+  const defs=svg.querySelector('defs');
+  for(const n of NODES){
+    const g=mk('linearGradient',{id:'grad-'+n.id,x1:'0%',y1:'0%',x2:'100%',y2:'100%'});
+    [[0,n.grad[0]],[100,n.grad[1]]].forEach(([o,c])=>{const s=mk('stop',{offset:o+'%','stop-color':c});g.appendChild(s);});
+    defs.appendChild(g);
+  }
+  for(const s of SECTIONS)drawStrip(s);
+  drawGov();
+  eg=mk('g');ng=mk('g');dg=mk('g');
+  svg.appendChild(eg);svg.appendChild(ng);svg.appendChild(dg);
+  EDGES.forEach(e=>drawEdge(e));NODES.forEach(n=>drawNode(n));EDGES.forEach(e=>addDots(e));
+  svg.addEventListener('click',()=>clearSel());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel();});
+  buildNavPane();
+  document.getElementById('np-search').addEventListener('input',filterNav);
+}
+
+function drawStrip(s){
+  const g=mk('g');
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:20,fill:s.strip}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
+  const t=mk('text',{x:14,y:s.rowStart+14,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.09em'});
+  t.textContent=s.label;g.appendChild(t);
+  g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
+  svg.insertBefore(g,svg.firstChild);
+}
+
+function drawGov(){
+  const g=mk('g');
+  const {x,y,w,h}=GOVERNANCE;
+  g.appendChild(mk('rect',{x,y,width:w,height:h,rx:10,fill:'rgba(220,38,38,.04)',stroke:'rgba(220,38,38,.18)','stroke-width':'1','stroke-dasharray':'5,3'}));
+  const t=mk('text',{x:x+10,y:y+13,fill:'rgba(252,165,165,.7)','font-size':'8.5','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.08em'});
+  t.textContent='GOVERNANCE & COMPLIANCE';g.appendChild(t);
+  svg.insertBefore(g,svg.firstChild);
+}
+
+function gn(id){return NODES.find(n=>n.id===id);}
+function ap(n1,n2){const x1=n1.x,y1=n1.y+28,x2=n2.x,y2=n2.y-28,my=(y1+y2)/2;if(Math.abs(x1-x2)<5)return`M ${x1},${y1} L ${x2},${y2}`;return`M ${x1},${y1} C ${x1},${my} ${x2},${my} ${x2},${y2}`;}
+
+function drawEdge(e){
+  const d=e.path||ap(gn(e.from),gn(e.to));e._d=d;
+  const p=mk('path',{d,stroke:e.color,'stroke-width':e.dashed?'1.5':'1.8',fill:'none',opacity:'0.42','marker-end':'url(#arrowhead)'});
+  if(e.dashed)p.setAttribute('stroke-dasharray','6,4');
+  p.setAttribute('data-from',e.from);p.setAttribute('data-to',e.to);
+  p.style.transition='opacity .25s';
+  eg.appendChild(p);
+}
+
+function drawNode(n){
+  const W=n.w||165,H=n.h||54,g=mk('g');
+  g.setAttribute('data-node-id',n.id);
+  g.style.cursor='pointer';g.style.transition='opacity .25s';
+  g.appendChild(mk('rect',{x:n.x-W/2-10,y:n.y-H/2-10,width:W+20,height:H+20,rx:17,fill:'transparent'}));
+  g.appendChild(mk('rect',{x:n.x-W/2-7,y:n.y-H/2-7,width:W+14,height:H+14,rx:16,fill:'none',stroke:n.stroke,'stroke-width':'2.5',opacity:'0'}));
+  g.appendChild(mk('rect',{x:n.x-W/2-4,y:n.y-H/2-4,width:W+8,height:H+8,rx:15,fill:'none',stroke:n.stroke,'stroke-width':'2',opacity:'0.15',filter:'url(#nglow)'}));
+  g.appendChild(mk('rect',{x:n.x-W/2,y:n.y-H/2,width:W,height:H,rx:11,fill:`url(#grad-${n.id})`,stroke:n.stroke,'stroke-width':'1.6',filter:'url(#shadow)'}));
+  const lb=mk('text',{x:n.x,y:n.y-(n.sub?7:5),'text-anchor':'middle',fill:'#FFFFFF','font-size':n.fs||'12.5','font-weight':'700','font-family':'system-ui,sans-serif'});
+  lb.textContent=n.label;g.appendChild(lb);
+  if(n.sub){const sb=mk('text',{x:n.x,y:n.y+10,'text-anchor':'middle',fill:'rgba(255,255,255,.58)','font-size':'9','font-family':'system-ui,sans-serif'});sb.textContent=n.sub;g.appendChild(sb);}
+  g.addEventListener('click',e=>{e.stopPropagation();selectNode(n.id);});
+  ng.appendChild(g);
+}
+
+function addDots(e){
+  const d=e._d,cnt=e.dots||2;
+  for(let i=0;i<cnt;i++){
+    const og=mk('circle',{r:'8',fill:e.color,opacity:'0.18',filter:'url(#glow)'});
+    og.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(og);
+    const c=mk('circle',{r:'4',fill:e.color,opacity:'0.95',filter:'url(#glow)'});
+    c.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(c);
+  }
+}
+
+function selectNode(id){
+  if(_sel===id){clearSel();return;}
+  _sel=id;
+  dg.style.opacity='0.18';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{
+    const nid=g.getAttribute('data-node-id');
+    const isSel=nid===id;
+    const isConn=EDGES.some(e=>(e.from===id&&e.to===nid)||(e.to===id&&e.from===nid));
+    g.style.opacity=isSel?'1':(isConn?'0.85':'0.12');
+    const sr=g.children[1];
+    sr.setAttribute('opacity',isSel?'0.55':'0');
+    if(isSel){const n=NODES.find(n=>n.id===id);if(n)sr.setAttribute('stroke',n.stroke);}
+  });
+  eg.querySelectorAll('[data-from]').forEach(p=>{
+    const isConn=p.getAttribute('data-from')===id||p.getAttribute('data-to')===id;
+    p.style.opacity=isConn?'0.85':'0.04';
+  });
+  showDp(id);
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.toggle('sel',b.getAttribute('data-nav-id')===id));
+  const btn=document.querySelector(`.nnb[data-nav-id="${id}"]`);
+  if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function clearSel(){
+  if(!_sel)return;
+  _sel=null;
+  dg.style.opacity='1';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{g.style.opacity='1';if(g.children[1])g.children[1].setAttribute('opacity','0');});
+  eg.querySelectorAll('[data-from]').forEach(p=>{p.style.opacity='0.42';});
+  closeDp();
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.remove('sel'));
+}
+
+function showDp(id){
+  const n=NODES.find(n=>n.id===id);
+  const d=NODE_DETAILS[id];
+  if(!n||!d)return;
+  document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
+  document.getElementById('dp-role').textContent=d.role;
+  document.getElementById('dp-name').textContent=n.label;
+  document.getElementById('dp-sub').textContent=n.sub||'';
+  const conns=getConns(id);
+  document.getElementById('dp-body').innerHTML=`
+    <div><div class="dp-sl">Purpose & Rationale</div><div class="dp-purpose">${d.purpose}</div></div>
+    <div><div class="dp-sl">Technology Stack</div><div class="dp-chips">${d.tech.map(t=>`<span class="dp-chip">${t}</span>`).join('')}</div></div>
+    <div><div class="dp-sl">Performance SLA</div><div class="dp-grid">${d.sla.map(s=>`<div class="dp-metric"><div class="dp-mv">${s.val}</div><div class="dp-ml">${s.lbl}</div></div>`).join('')}</div></div>
+    <div class="dp-pat"><div class="dp-pat-l">Architectural Pattern</div><div class="dp-pat-v">${d.pattern}</div></div>
+    <div><div class="dp-sl">Connected Components</div><div class="dp-conns">${conns.length?conns.map(c=>`<div class="dp-conn" onclick="event.stopPropagation();selectNode('${c.id}')"><span class="dp-dir ${c.dir}">${c.dir==='in'?'← FROM':'→ TO'}</span><span class="dp-cn">${c.label}</span></div>`).join(''):'<div class="no-conn">No direct connections</div>'}</div></div>
+    <div class="dp-risk"><div class="dp-risk-l">⚠ Risk &amp; Mitigation</div><div class="dp-risk-v">${d.risk}</div></div>`;
+  document.getElementById('dp').classList.add('open');
+}
+
+function getConns(id){
+  const seen=new Set(),r=[];
+  EDGES.forEach(e=>{
+    if(e.from===id){const n=gn(e.to);if(n&&!seen.has('out'+e.to)){seen.add('out'+e.to);r.push({id:e.to,label:n.label,dir:'out'});}}
+    if(e.to===id){const n=gn(e.from);if(n&&!seen.has('in'+e.from)){seen.add('in'+e.from);r.push({id:e.from,label:n.label,dir:'in'});}}
+  });
+  return r;
+}
+
+function closeDp(){document.getElementById('dp').classList.remove('open');}
+function toggleNp(){document.getElementById('np').classList.toggle('open');}
+
+function buildNavPane(){
+  const body=document.getElementById('np-body');
+  SECTIONS.forEach(sec=>{
+    const secNodes=NODES.filter(n=>n.y>=sec.rowStart&&n.y<sec.rowStart+sec.rowH);
+    if(!secNodes.length)return;
+    const wrap=document.createElement('div');
+    const hdr=document.createElement('div');hdr.className='nsh';
+    hdr.innerHTML=`<div class="nsh-bar" style="background:${sec.bar}"></div><span class="nsh-lbl">${sec.label}</span><span class="nsh-chev">▾</span>`;
+    const nodesDiv=document.createElement('div');nodesDiv.className='nsn';
+    hdr.onclick=()=>{hdr.classList.toggle('col');nodesDiv.classList.toggle('hid');};
+    secNodes.forEach(n=>{
+      const d=NODE_DETAILS[n.id]||{};
+      const btn=document.createElement('button');btn.className='nnb';btn.setAttribute('data-nav-id',n.id);
+      btn.innerHTML=`<div class="nn-sw" style="background:linear-gradient(135deg,${n.grad[0]},${n.grad[1]});border-color:${n.stroke}40"></div><div class="nn-info"><div class="nn-name">${n.label}</div><div class="nn-role">${d.role||''}</div></div>`;
+      btn.onclick=()=>selectNode(n.id);
+      nodesDiv.appendChild(btn);
+    });
+    wrap.appendChild(hdr);wrap.appendChild(nodesDiv);body.appendChild(wrap);
+  });
+}
+
+function filterNav(){
+  const q=this.value.toLowerCase();
+  document.querySelectorAll('.nnb').forEach(btn=>{
+    const nm=btn.querySelector('.nn-name').textContent.toLowerCase();
+    const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
+    btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
+  });
+}
+
+init();
+</script>
+</body>
+</html>

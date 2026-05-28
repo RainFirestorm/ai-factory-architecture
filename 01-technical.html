@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Technical Architecture — AI Factory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#06090F;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;overflow:hidden;height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(56,189,248,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.03) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+
+/* ── MAIN NAV ── */
+.main-nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(6,9,15,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-left{display:flex;align-items:center;gap:12px;min-width:0}
+.back{color:#64748B;text-decoration:none;font-size:12px;white-space:nowrap;transition:color .2s}
+.back:hover{color:#E2E8F0}
+.vdiv{width:1px;height:20px;background:rgba(255,255,255,.1)}
+.nav-role{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#38BDF8;margin-bottom:2px}
+.nav-title{font-size:13px;font-weight:700;color:#F1F5F9;white-space:nowrap}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.devops-btn{display:flex;align-items:center;gap:7px;padding:6px 14px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);border-radius:8px;color:#FBBF24;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
+.devops-btn:hover,.devops-btn.active{background:rgba(251,191,36,.2);border-color:#FBBF24;box-shadow:0 0 16px rgba(251,191,36,.25)}
+.devops-btn .icon{font-size:14px}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:#38BDF8;border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.08)}
+
+/* ── LEGEND BAR ── */
+.legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(6,9,15,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#64748B;white-space:nowrap}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
+.leg-pulse{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:lp 1.5s infinite}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+/* ── MAIN SVG ── */
+#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116px)}
+
+/* ── NAV PANE ── */
+.np{position:fixed;top:116px;left:-248px;width:274px;height:calc(100vh - 116px);z-index:250;background:rgba(3,6,12,.97);border-right:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:left .38s cubic-bezier(.4,0,.2,1)}
+.np.open{left:0}
+.np-tab{position:absolute;top:50%;right:0;transform:translateY(-50%);width:26px;height:96px;cursor:pointer;background:rgba(56,189,248,.07);border-left:2px solid rgba(56,189,248,.2);border-radius:0 10px 10px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:all .2s}
+.np-tab:hover{background:rgba(56,189,248,.13)}
+.np-tab-txt{writing-mode:vertical-lr;text-orientation:mixed;font-size:7.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(56,189,248,.75);transform:rotate(180deg)}
+.np-tab-ico{font-size:12px;color:rgba(56,189,248,.5);transition:transform .35s}
+.np.open .np-tab-ico{transform:rotate(180deg)}
+.np-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.np-head-lbl{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:10px}
+.np-search{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:7px 10px 7px 30px;font-size:12px;color:#E2E8F0;outline:none;transition:all .2s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='rgba(255,255,255,.25)' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+.np-search:focus{border-color:rgba(56,189,248,.4);background-color:rgba(56,189,248,.06)}
+.np-search::placeholder{color:rgba(255,255,255,.2)}
+.np-body{flex:1;overflow-y:auto;padding-bottom:20px}
+.np-body::-webkit-scrollbar{width:3px}.np-body::-webkit-scrollbar-track{background:transparent}.np-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.nsh{display:flex;align-items:center;gap:7px;padding:10px 10px 5px;cursor:pointer;user-select:none;transition:background .15s}
+.nsh:hover{background:rgba(255,255,255,.03)}
+.nsh-bar{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.nsh-lbl{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;flex:1;color:rgba(255,255,255,.32)}
+.nsh-chev{font-size:9px;color:rgba(255,255,255,.18);transition:transform .25s}
+.nsh.col .nsh-chev{transform:rotate(-90deg)}
+.nsn{padding:0 5px 4px;display:flex;flex-direction:column;gap:2px}
+.nsn.hid{display:none}
+.nnb{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:transparent;transition:all .15s;text-align:left;width:100%}
+.nnb:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.07)}
+.nnb.sel{background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3)}
+.nn-sw{width:28px;height:28px;border-radius:7px;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.nn-info{flex:1;min-width:0}
+.nn-name{font-size:11px;font-weight:700;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nn-role{font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+/* ── DETAIL PANEL ── */
+.dp{position:fixed;top:116px;right:-392px;width:382px;height:calc(100vh - 116px);z-index:250;background:rgba(3,6,12,.97);border-left:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:right .38s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.dp.open{right:0}
+.dp-hero{flex-shrink:0;height:104px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;overflow:hidden}
+.dp-hero-bg{position:absolute;inset:0}
+.dp-hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.3) 100%)}
+.dp-hero-txt{position:relative;z-index:1;min-width:0}
+.dp-hero-role{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}
+.dp-hero-name{font-size:18px;font-weight:900;color:#fff;line-height:1.05}
+.dp-hero-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:5px}
+.dp-close{position:absolute;top:10px;right:10px;z-index:2;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#94A3B8;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dp-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.dp-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.dp-body::-webkit-scrollbar{width:3px}.dp-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.dp-sl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:7px}
+.dp-purpose{font-size:12px;line-height:1.72;color:rgba(255,255,255,.68)}
+.dp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.dp-chip{padding:3px 9px;border-radius:100px;font-size:10.5px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.62)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.dp-metric{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px}
+.dp-mv{font-size:17px;font-weight:900;color:#fff;line-height:1}
+.dp-ml{font-size:9px;color:rgba(255,255,255,.36);margin-top:3px}
+.dp-pat{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.18);border-radius:10px;padding:11px 13px}
+.dp-pat-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(56,189,248,.55);margin-bottom:5px}
+.dp-pat-v{font-size:12px;font-weight:700;color:rgba(125,211,252,.9);line-height:1.5}
+.dp-conns{display:flex;flex-direction:column;gap:5px}
+.dp-conn{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .15s}
+.dp-conn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.13)}
+.dp-dir{font-size:7.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 6px;border-radius:100px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.dp-dir.in{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.25);color:#38BDF8}
+.dp-dir.out{background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.25);color:#FB923C}
+.dp-cn{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.72)}
+.dp-risk{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.16);border-radius:10px;padding:11px 13px}
+.dp-risk-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(248,113,113,.55);margin-bottom:5px}
+.dp-risk-v{font-size:11.5px;line-height:1.65;color:rgba(255,255,255,.6)}
+.no-conn{font-size:11px;color:rgba(255,255,255,.25);padding:6px 4px}
+
+/* ── DEVOPS PANEL ── */
+.devops-panel{
+  position:fixed;bottom:-100%;left:0;right:0;z-index:300;
+  height:420px;
+  background:rgba(4,7,12,.97);
+  border-top:2px solid rgba(251,191,36,.4);
+  backdrop-filter:blur(20px);
+  transition:bottom .4s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+}
+.devops-panel.open{bottom:0}
+.devops-header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px 0;flex-shrink:0}
+.devops-header h2{font-size:15px;font-weight:800;color:#FBBF24;display:flex;align-items:center;gap:10px}
+.devops-header h2 span{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(251,191,36,.6);padding:3px 10px;border:1px solid rgba(251,191,36,.25);border-radius:100px}
+.devops-close{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94A3B8;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.devops-close:hover{background:rgba(255,255,255,.12);color:#E2E8F0}
+.devops-body{flex:1;padding:8px 24px 14px;display:flex;gap:20px;min-height:0}
+.devops-svg-wrap{flex:1;min-width:0}
+#cicd-svg{width:100%;height:100%}
+.devops-notes{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding-top:6px}
+.note-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 14px}
+.note-card h4{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.note-card ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.note-card li{font-size:11px;color:#94A3B8;display:flex;align-items:flex-start;gap:6px;line-height:1.4}
+.note-card li::before{content:'→';color:inherit;flex-shrink:0;opacity:.7}
+.brief-bar{position:fixed;top:82px;left:0;right:0;z-index:185;height:34px;display:flex;align-items:center;padding:0 28px;gap:10px;background:rgba(255,255,255,.022);border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;color:rgba(255,255,255,.42);font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden}
+.brief-bar strong{color:rgba(255,255,255,.7);font-weight:600}
+.brief-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;opacity:.75}
+</style>
+</head>
+<body>
+
+<!-- MAIN NAV -->
+<nav class="main-nav">
+  <div class="nav-left">
+    <a href="index.html" class="back">← Back</a>
+    <div class="vdiv"></div>
+    <div>
+      <div class="nav-role">Chief Technology Officer</div>
+      <div class="nav-title">Technical Architecture — AI Factory</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <button class="devops-btn" id="devops-btn" onclick="toggleDevOps()">
+      <span class="icon">⚡</span>DevOps / CI·CD
+    </button>
+    <div class="vdiv"></div>
+    <div class="nav-links">
+      <a href="01-technical.html"   class="nav-link active">⚙ Technical</a>
+      <a href="02-application.html" class="nav-link">🔗 Application</a>
+      <a href="03-data.html"        class="nav-link">🗄 Data</a>
+      <a href="04-business.html"    class="nav-link">📈 Business</a>
+    </div>
+  </div>
+</nav>
+
+<!-- LEGEND BAR -->
+<div class="legend-bar">
+  <div class="leg-item"><div class="leg-dot" style="background:#3B82F6"></div>Client</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#2DD4BF"></div>CDN / Edge</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#818CF8"></div>Network</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#F87171"></div>Control Plane</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#C084FC"></div>Orchestration</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#4ADE80"></div>Databricks</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#38BDF8"></div>Storage</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#C084FC"></div>External / AI</div>
+  <div class="leg-sep"></div>
+  <div class="leg-item" style="color:#FBBF24"><div class="leg-pulse" style="background:#FBBF24"></div>Live data flow</div>
+</div>
+
+<!-- BRIEF -->
+<div class="brief-bar">
+  <div class="brief-dot" style="background:#38BDF8"></div>
+  3-zone Kubernetes deployment running the AI Factory — auto-scaling API gateways, HashiCorp Vault secrets management, Databricks ML workspace, and Delta Lake storage, all wired for zero-downtime operations. <strong>The infrastructure everything runs on.</strong>
+</div>
+
+<!-- NAV PANE -->
+<div class="np" id="np">
+  <div class="np-tab" onclick="toggleNp()">
+    <span class="np-tab-txt">Navigator</span>
+    <span class="np-tab-ico">◀</span>
+  </div>
+  <div class="np-head">
+    <div class="np-head-lbl">Infrastructure Navigator</div>
+    <input class="np-search" id="np-search" placeholder="Search components…" autocomplete="off">
+  </div>
+  <div class="np-body" id="np-body"></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="dp" id="dp">
+  <div class="dp-hero" id="dp-hero">
+    <div class="dp-hero-bg" id="dp-hero-bg"></div>
+    <div class="dp-hero-ov"></div>
+    <div class="dp-hero-txt">
+      <div class="dp-hero-role" id="dp-role"></div>
+      <div class="dp-hero-name" id="dp-name"></div>
+      <div class="dp-hero-sub"  id="dp-sub"></div>
+    </div>
+    <button class="dp-close" onclick="closeDp()">✕</button>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<!-- MAIN DIAGRAM -->
+<svg id="diagram" viewBox="0 0 1500 875" preserveAspectRatio="xMidYMid meet">
+<defs>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="nglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+  </filter>
+  <filter id="shadow">
+    <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.55"/>
+  </filter>
+  <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M 0,1 L 9,5 L 0,9 Z" fill="rgba(255,255,255,0.5)"/>
+  </marker>
+</defs>
+</svg>
+
+<!-- DEVOPS PANEL -->
+<div class="devops-panel" id="devops-panel">
+  <div class="devops-header">
+    <h2>⚡ CI/CD Pipeline Integration <span>DevOps Expansion</span></h2>
+    <button class="devops-close" onclick="toggleDevOps()">✕</button>
+  </div>
+  <div class="devops-body">
+    <div class="devops-svg-wrap">
+      <svg id="cicd-svg" viewBox="0 0 1160 290" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <filter id="cglow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="cshadow"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.6"/></filter>
+        <marker id="carrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M 0,1 L 9,5 L 0,9 Z" fill="rgba(255,255,255,0.55)"/>
+        </marker>
+        <linearGradient id="cg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1E3A8A"/><stop offset="100%" stop-color="#2563EB"/></linearGradient>
+        <linearGradient id="cg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#312E81"/><stop offset="100%" stop-color="#4F46E5"/></linearGradient>
+        <linearGradient id="cg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#451A03"/><stop offset="100%" stop-color="#B45309"/></linearGradient>
+        <linearGradient id="cg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#431407"/><stop offset="100%" stop-color="#C2410C"/></linearGradient>
+        <linearGradient id="cg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#713F12"/><stop offset="100%" stop-color="#D97706"/></linearGradient>
+        <linearGradient id="cg6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#14532D"/><stop offset="100%" stop-color="#16A34A"/></linearGradient>
+        <linearGradient id="cg7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#134E4A"/><stop offset="100%" stop-color="#0D9488"/></linearGradient>
+        <linearGradient id="cg8" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#450A0A"/><stop offset="100%" stop-color="#991B1B"/></linearGradient>
+      </defs>
+
+      <!-- Background -->
+      <rect x="0" y="0" width="1160" height="290" fill="rgba(255,255,255,0.01)" rx="0"/>
+
+      <!-- Stage labels row at top -->
+      <text x="80"   y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">SOURCE</text>
+      <text x="240"  y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">PIPELINE</text>
+      <text x="420"  y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">QUALITY</text>
+      <text x="600"  y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">BUILD</text>
+      <text x="760"  y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">ARTIFACT</text>
+      <text x="920"  y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">DEPLOY</text>
+      <text x="1090" y="24" text-anchor="middle" fill="rgba(255,255,255,.22)" font-size="8" font-weight="700" letter-spacing=".08em" font-family="system-ui">VERIFY</text>
+
+      <!-- NODES row (y=145) -->
+      <!-- N1: Dev Push -->
+      <rect x="20"  y="118" width="120" height="54" rx="10" fill="url(#cg1)" stroke="#60A5FA" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="80"  y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">Dev Push</text>
+      <text x="80"  y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">Feature branch · PR merge</text>
+
+      <!-- N2: GitHub Actions -->
+      <rect x="175" y="118" width="130" height="54" rx="10" fill="url(#cg2)" stroke="#818CF8" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="240" y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">GitHub Actions</text>
+      <text x="240" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">Trigger · Workflow start</text>
+
+      <!-- N3: Test & Scan -->
+      <rect x="355" y="118" width="130" height="54" rx="10" fill="url(#cg3)" stroke="#FCD34D" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="420" y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">Test &amp; Scan</text>
+      <text x="420" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">Unit · SAST · Trivy · Coverage</text>
+
+      <!-- N4: Docker Build -->
+      <rect x="535" y="118" width="130" height="54" rx="10" fill="url(#cg4)" stroke="#FB923C" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="600" y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">Docker Build</text>
+      <text x="600" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">Multi-stage · Layer cache</text>
+
+      <!-- N5: Registry -->
+      <rect x="695" y="118" width="130" height="54" rx="10" fill="url(#cg5)" stroke="#FCD34D" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="760" y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">Registry Push</text>
+      <text x="760" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">ECR/GCR · Tag · Sign · Scan</text>
+
+      <!-- N6: K8s Deploy -->
+      <rect x="855" y="118" width="130" height="54" rx="10" fill="url(#cg6)" stroke="#4ADE80" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="920" y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">Helm / ArgoCD</text>
+      <text x="920" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">GitOps · Rolling update · K8s</text>
+
+      <!-- N7: Health Check -->
+      <rect x="1025" y="118" width="130" height="54" rx="10" fill="url(#cg7)" stroke="#2DD4BF" stroke-width="1.6" filter="url(#cshadow)"/>
+      <text x="1090" y="140" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700" font-family="system-ui">Health Check ✓</text>
+      <text x="1090" y="156" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">Liveness · Smoke · Alerts</text>
+
+      <!-- Rollback node -->
+      <rect x="855" y="222" width="130" height="46" rx="10" fill="url(#cg8)" stroke="#FCA5A5" stroke-width="1.4" filter="url(#cshadow)"/>
+      <text x="920" y="242" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="system-ui">Auto Rollback</text>
+      <text x="920" y="257" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="8.5" font-family="system-ui">On failure → prev image</text>
+
+      <!-- EDGES (paths) -->
+      <path id="cp1" d="M 140,145 L 175,145" stroke="#60A5FA" stroke-width="2" fill="none" opacity=".5" marker-end="url(#carrow)"/>
+      <path id="cp2" d="M 305,145 L 355,145" stroke="#818CF8" stroke-width="2" fill="none" opacity=".5" marker-end="url(#carrow)"/>
+      <path id="cp3" d="M 485,145 L 535,145" stroke="#FCD34D" stroke-width="2" fill="none" opacity=".5" marker-end="url(#carrow)"/>
+      <path id="cp4" d="M 665,145 L 695,145" stroke="#FB923C" stroke-width="2" fill="none" opacity=".5" marker-end="url(#carrow)"/>
+      <path id="cp5" d="M 825,145 L 855,145" stroke="#FCD34D" stroke-width="2" fill="none" opacity=".5" marker-end="url(#carrow)"/>
+      <path id="cp6" d="M 985,145 L 1025,145" stroke="#4ADE80" stroke-width="2" fill="none" opacity=".5" marker-end="url(#carrow)"/>
+      <!-- Feedback loop (top arc) -->
+      <path id="cp7" d="M 1090,118 C 1090,55 80,55 80,118" stroke="#2DD4BF" stroke-width="1.5" fill="none" opacity=".4" stroke-dasharray="5,4" marker-end="url(#carrow)"/>
+      <!-- Rollback paths -->
+      <path id="cp8" d="M 920,172 L 920,222" stroke="#FCA5A5" stroke-width="1.5" fill="none" opacity=".45" stroke-dasharray="5,4" marker-end="url(#carrow)"/>
+      <path id="cp9" d="M 855,245 C 760,245 760,172 760,172" stroke="#FCA5A5" stroke-width="1.5" fill="none" opacity=".35" stroke-dasharray="5,4" marker-end="url(#carrow)"/>
+
+      <!-- Step labels between nodes -->
+      <text x="157" y="136" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="7.5" font-family="system-ui">webhook</text>
+      <text x="330" y="136" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="7.5" font-family="system-ui">quality gate</text>
+      <text x="510" y="136" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="7.5" font-family="system-ui">✓ pass</text>
+      <text x="680" y="136" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="7.5" font-family="system-ui">image:sha</text>
+      <text x="840" y="136" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="7.5" font-family="system-ui">pull</text>
+      <text x="1006" y="136" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="7.5" font-family="system-ui">pod rollout</text>
+
+      <!-- Deploying to label -->
+      <text x="920" y="289" text-anchor="middle" fill="rgba(74,222,128,.55)" font-size="9" font-weight="600" font-family="system-ui">↑ Deploys to: Orchestrator · API GW · Databricks Agents · All K8s pods in infrastructure above</text>
+
+      <!-- ANIMATED DOTS on CI/CD pipeline -->
+      <circle r="4.5" fill="#60A5FA" filter="url(#cglow)"><animateMotion dur="1.6s" begin="0s" repeatCount="indefinite" path="M 140,145 L 175,145"/></circle>
+      <circle r="4.5" fill="#818CF8" filter="url(#cglow)"><animateMotion dur="1.8s" begin="0.3s" repeatCount="indefinite" path="M 305,145 L 355,145"/></circle>
+      <circle r="4.5" fill="#FCD34D" filter="url(#cglow)"><animateMotion dur="2.0s" begin="0.6s" repeatCount="indefinite" path="M 485,145 L 535,145"/></circle>
+      <circle r="4.5" fill="#FB923C" filter="url(#cglow)"><animateMotion dur="1.6s" begin="0.9s" repeatCount="indefinite" path="M 665,145 L 695,145"/></circle>
+      <circle r="4.5" fill="#FCD34D" filter="url(#cglow)"><animateMotion dur="1.6s" begin="1.2s" repeatCount="indefinite" path="M 825,145 L 855,145"/></circle>
+      <circle r="4.5" fill="#4ADE80" filter="url(#cglow)"><animateMotion dur="1.6s" begin="1.5s" repeatCount="indefinite" path="M 985,145 L 1025,145"/></circle>
+      <circle r="4.5" fill="#2DD4BF" filter="url(#cglow)"><animateMotion dur="4s" begin="0s" repeatCount="indefinite" calcMode="spline" keyTimes="0;1" keySplines="0.42 0 0.58 1" path="M 1090,118 C 1090,55 80,55 80,118"/></circle>
+      </svg>
+    </div>
+
+    <div class="devops-notes">
+      <div class="note-card" style="border-color:rgba(99,102,241,.2)">
+        <h4 style="color:#818CF8">CI Stages</h4>
+        <ul>
+          <li>Lint + format checks</li>
+          <li>Unit + integration tests</li>
+          <li>SAST security scan</li>
+          <li>Container scan (Trivy)</li>
+          <li>80%+ coverage gate</li>
+        </ul>
+      </div>
+      <div class="note-card" style="border-color:rgba(74,222,128,.2)">
+        <h4 style="color:#4ADE80">CD Strategy</h4>
+        <ul>
+          <li>Helm charts + ArgoCD GitOps</li>
+          <li>Rolling update (zero downtime)</li>
+          <li>Auto rollback on failure</li>
+          <li>Blue/green for major releases</li>
+          <li>Canary at 5% traffic</li>
+        </ul>
+      </div>
+      <div class="note-card" style="border-color:rgba(251,191,36,.2)">
+        <h4 style="color:#FBBF24">Environments</h4>
+        <ul>
+          <li>Dev → auto deploy on PR</li>
+          <li>Staging → auto on merge</li>
+          <li>Prod → approval gate</li>
+          <li>3-20 pods auto-scale</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── DEVOPS TOGGLE ── */
+function toggleDevOps() {
+  const panel = document.getElementById('devops-panel');
+  const btn   = document.getElementById('devops-btn');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  btn.classList.toggle('active', !isOpen);
+  btn.innerHTML = isOpen
+    ? '<span class="icon">⚡</span>DevOps / CI·CD'
+    : '<span class="icon">✕</span>Close DevOps';
+}
+
+/* ── DIAGRAM DATA ── */
+// Rows: each row has a header strip at rowStart, nodes centered at rowStart+56
+// rowHeight = 118px between rows
+const ROW = [58, 176, 294, 412, 530, 648, 766]; // row start positions
+// node center = row_start + 20(strip) + 8(gap) + 27(half node) = row_start + 55
+const NC = ROW.map(r => r + 55); // [113, 231, 349, 467, 585, 703, 821]
+
+const SECTIONS = [
+  {label:'CLIENT LAYER',          rowStart:ROW[0], rowH:118, strip:'rgba(59,130,246,.11)',  bar:'#3B82F6',  lc:'rgba(147,197,253,.85)'},
+  {label:'CDN / EDGE',            rowStart:ROW[1], rowH:118, strip:'rgba(45,212,191,.1)',   bar:'#2DD4BF',  lc:'rgba(94,234,212,.8)'},
+  {label:'NETWORK — LOAD BALANCERS',rowStart:ROW[2],rowH:118,strip:'rgba(129,140,248,.1)',  bar:'#818CF8',  lc:'rgba(165,180,252,.8)'},
+  {label:'CONTROL PLANE',         rowStart:ROW[3], rowH:118, strip:'rgba(248,113,113,.1)',  bar:'#F87171',  lc:'rgba(252,165,165,.8)'},
+  {label:'ORCHESTRATION LAYER',   rowStart:ROW[4], rowH:118, strip:'rgba(192,132,252,.1)',  bar:'#C084FC',  lc:'rgba(216,180,254,.8)'},
+  {label:'DATABRICKS WORKSPACE',  rowStart:ROW[5], rowH:118, strip:'rgba(74,222,128,.1)',   bar:'#4ADE80',  lc:'rgba(134,239,172,.8)'},
+  {label:'STORAGE LAYER',         rowStart:ROW[6], rowH:100, strip:'rgba(56,189,248,.1)',   bar:'#38BDF8',  lc:'rgba(125,211,252,.8)'},
+];
+
+const NODES = [
+  // Row 0 — CLIENT
+  {id:'web',   label:'Web App',           sub:'React · WebSocket',          x:175,  y:NC[0], grad:['#1E3A8A','#3B82F6'], stroke:'#60A5FA'},
+  {id:'mob',   label:'Mobile',            sub:'iOS · Android',              x:385,  y:NC[0], grad:['#1E3A8A','#3B82F6'], stroke:'#60A5FA'},
+  {id:'cli',   label:'CLI Tool',          sub:'Automation · Batch',         x:595,  y:NC[0], grad:['#1E3A8A','#3B82F6'], stroke:'#60A5FA'},
+  {id:'dash',  label:'Dashboard',         sub:'Grafana · Real-time',        x:830,  y:NC[0], grad:['#500724','#9D174D'], stroke:'#F472B6'},
+  // Row 1 — CDN
+  {id:'cdn',   label:'Global CDN',        sub:'CloudFront · 95% Hit Rate',  x:375,  y:NC[1], grad:['#134E4A','#0D9488'], stroke:'#2DD4BF', w:185},
+  {id:'extc',  label:'Claude API ☁',     sub:'Anthropic · Rate Limited',   x:1270, y:NC[1], grad:['#3B0764','#7E22CE'], stroke:'#C084FC'},
+  // Row 2 — LB
+  {id:'lb1a',  label:'LB Zone 1A',        sub:'TLS · Rate Limit',           x:215,  y:NC[2], grad:['#312E81','#4F46E5'], stroke:'#818CF8'},
+  {id:'lb1b',  label:'LB Zone 1B',        sub:'TLS · Failover',             x:515,  y:NC[2], grad:['#312E81','#4F46E5'], stroke:'#818CF8'},
+  {id:'vault', label:'Vault',             sub:'Secrets · Encryption',       x:1000, y:NC[2], grad:['#450A0A','#991B1B'], stroke:'#FCA5A5'},
+  {id:'kafka', label:'Managed Kafka',     sub:'Events · Multi-AZ',          x:1270, y:NC[2], grad:['#451A03','#B45309'], stroke:'#FCD34D'},
+  // Row 3 — CONTROL
+  {id:'api1a', label:'API GW 1A',         sub:'Port 8080 · 2 Replicas',     x:215,  y:NC[3], grad:['#7F1D1D','#DC2626'], stroke:'#F87171'},
+  {id:'api1b', label:'API GW 1B',         sub:'Port 8080 · 2 Replicas',     x:515,  y:NC[3], grad:['#7F1D1D','#DC2626'], stroke:'#F87171'},
+  {id:'sched', label:'Scheduler',         sub:'DAG Executor · Task Queue',  x:830,  y:NC[3], grad:['#1E293B','#334155'], stroke:'#94A3B8'},
+  // Row 4 — ORCHESTRATION
+  {id:'orch1', label:'Orchestrator',      sub:'Primary · 2 CPUs · Claude',  x:215,  y:NC[4], grad:['#4C1D95','#6D28D9'], stroke:'#C084FC', w:175},
+  {id:'orch2', label:'Orchestrator',      sub:'Standby · 2 CPUs',           x:515,  y:NC[4], grad:['#4C1D95','#6D28D9'], stroke:'#C084FC'},
+  // Row 5 — DATABRICKS
+  {id:'dbc',   label:'Databricks Cluster',sub:'64 CPUs · 256 GB · ML',      x:215,  y:NC[5], grad:['#14532D','#15803D'], stroke:'#4ADE80', w:178},
+  {id:'dbw',   label:'DB Workspace',      sub:'Notebooks · SQL Editor',     x:490,  y:NC[5], grad:['#14532D','#15803D'], stroke:'#4ADE80'},
+  {id:'mlf',   label:'MLflow Registry',   sub:'Models · Versioning',        x:770,  y:NC[5], grad:['#065F46','#059669'], stroke:'#34D399'},
+  {id:'monit', label:'Prometheus/Grafana',sub:'Metrics · Alerts · Logs',    x:1065, y:NC[5], grad:['#500724','#9D174D'], stroke:'#F472B6', w:178},
+  // Row 6 — STORAGE
+  {id:'delta', label:'Delta Lake',        sub:'30 TB · ACID · Time Travel', x:215,  y:NC[6], grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8', w:172},
+  {id:'redis', label:'Redis Cache',       sub:'16 GB · HA · Feature Store', x:470,  y:NC[6], grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8'},
+  {id:'pg',    label:'PostgreSQL',        sub:'Multi-AZ · Replication',     x:730,  y:NC[6], grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8'},
+  {id:'dr',    label:'US-West DR',        sub:'Standby · 15 min RPO',       x:1005, y:NC[6], grad:['#111827','#1F2937'], stroke:'#6B7280'},
+];
+
+// Build edge paths using node centers
+function nb(id) { return NODES.find(n=>n.id===id); }
+function ap(n1,n2) {
+  const x1=n1.x, y1=n1.y+27, x2=n2.x, y2=n2.y-27, my=(y1+y2)/2;
+  if (Math.abs(x1-x2) < 6) return `M ${x1},${y1} L ${x2},${y2}`;
+  return `M ${x1},${y1} C ${x1},${my} ${x2},${my} ${x2},${y2}`;
+}
+
+const EDGES = [
+  // Clients → CDN
+  {from:'web',  to:'cdn',   color:'#38BDF8', dur:2.2, begin:0.0},
+  {from:'mob',  to:'cdn',   color:'#38BDF8', dur:2.2, begin:0.7},
+  {from:'cli',  to:'cdn',   color:'#38BDF8', dur:2.2, begin:1.4},
+  // Dashboard → Monitoring (long path)
+  {from:'dash', to:'monit', color:'#F472B6', dur:3.8, begin:0.5,
+    path:`M 830,${NC[0]+27} C 830,420 1065,420 1065,${NC[5]-27}`},
+  // CDN → Load Balancers
+  {from:'cdn',  to:'lb1a',  color:'#2DD4BF', dur:2.0, begin:0.0},
+  {from:'cdn',  to:'lb1b',  color:'#2DD4BF', dur:2.0, begin:1.0},
+  // LB ↔ sync
+  {from:'lb1a', to:'lb1b',  color:'#818CF8', dur:2.5, begin:0.3,
+    path:`M ${215+82},${NC[2]} C 365,${NC[2]-22} 365,${NC[2]-22} ${515-82},${NC[2]}`},
+  // LBs → API GWs
+  {from:'lb1a', to:'api1a', color:'#818CF8', dur:1.8, begin:0.0},
+  {from:'lb1b', to:'api1b', color:'#818CF8', dur:1.8, begin:0.9},
+  // API GWs → Orchestrators
+  {from:'api1a',to:'orch1', color:'#F87171', dur:1.8, begin:0.0},
+  {from:'api1b',to:'orch2', color:'#F87171', dur:1.8, begin:0.9},
+  // Vault → API GW (credentials, long diagonal)
+  {from:'vault',to:'api1a', color:'#FCA5A5', dur:3.2, begin:1.0,
+    path:`M ${1000-82},${NC[2]} C 580,${NC[2]+25} 280,${NC[3]-35} 215,${NC[3]-27}`},
+  // Kafka → Orchestrator (long arc)
+  {from:'kafka',to:'orch1', color:'#FCD34D', dur:3.2, begin:1.5,
+    path:`M 1270,${NC[2]+27} C 1270,${NC[4]+10} 293,${NC[4]+10} 293,${NC[4]-27}`},
+  // Scheduler → Orchestrator
+  {from:'sched',to:'orch1', color:'#A78BFA', dur:2.5, begin:0.5,
+    path:`M 830,${NC[3]+27} C 830,${NC[4]+10} 293,${NC[4]+10} 293,${NC[4]-27}`},
+  // Orchestrators → Claude API (long arc)
+  {from:'orch1',to:'extc',  color:'#C084FC', dur:3.2, begin:0.0,
+    path:`M 293,${NC[4]} C 650,${NC[3]-20} 1050,${NC[2]+10} 1270,${NC[1]+27}`},
+  // Orchestrators → Databricks
+  {from:'orch1',to:'dbc',   color:'#4ADE80', dur:2.0, begin:0.0},
+  {from:'orch2',to:'dbw',   color:'#4ADE80', dur:2.0, begin:1.0},
+  // DB Cluster → MLflow (horizontal)
+  {from:'dbc',  to:'mlf',   color:'#34D399', dur:2.5, begin:0.5,
+    path:`M ${215+89},${NC[5]} C 490,${NC[5]} 540,${NC[5]} ${770-82},${NC[5]}`},
+  // Databricks → Storage
+  {from:'dbc',  to:'delta', color:'#38BDF8', dur:2.0, begin:0.0},
+  {from:'dbw',  to:'redis', color:'#38BDF8', dur:2.0, begin:0.7},
+  {from:'mlf',  to:'pg',    color:'#38BDF8', dur:2.0, begin:1.4},
+  // Storage → DR replication
+  {from:'delta',to:'dr',    color:'#94A3B8', dur:4.5, begin:2.0,
+    path:`M ${215+86},${NC[6]} C 580,${NC[6]} 680,${NC[6]} ${1005-87},${NC[6]}`, dots:1},
+  {from:'pg',   to:'dr',    color:'#94A3B8', dur:4.0, begin:3.5,
+    path:`M ${730+82},${NC[6]} C 850,${NC[6]} 900,${NC[6]} ${1005-87},${NC[6]}`, dots:1},
+  // Databricks → Monitoring (metrics, dashed)
+  {from:'dbc',  to:'monit', color:'#F472B6', dur:3.5, begin:1.5, dashed:true, dots:1,
+    path:`M ${215+89},${NC[5]} C 600,${NC[5]+25} 850,${NC[5]+20} ${1065-89},${NC[5]}`},
+];
+
+/* ── NODE DETAILS ── */
+const NODE_DETAILS = {
+  web:{role:'Client — Web Application',purpose:'React 18 Progressive Web App delivering the AI Factory\'s intelligence to end users via browser and mobile web. WebSocket connections maintain persistent bidirectional channels enabling streaming AI responses in real-time. CloudFront CDN serves the static bundle globally with <50ms TTFB, absorbing 95% of requests at the edge before they reach origin.',tech:['React 18 + Next.js (PWA)','WebSocket streaming (AI responses)','CloudFront CDN (global edge)','OAuth2 PKCE authentication'],sla:[{val:'<50ms',lbl:'TTFB at CDN edge'},{val:'95%',lbl:'CDN cache hit rate'}],pattern:'Shell + dynamic: static PWA shell cached at edge; AI-generated content streamed dynamically. Service Worker enables offline functionality and background sync for non-real-time requests.',risk:'WebSocket connection instability causing broken streaming responses — mitigated by automatic reconnection with exponential backoff; partial response recovery from Result Queue on reconnect.'},
+  mob:{role:'Client — Mobile Application',purpose:'Native iOS and Android apps providing push notification-driven AI interactions. AI Factory results delivered as rich push notifications even when app is backgrounded. Mobile-specific UX optimizations: swipe gestures for recommendation browsing, haptic feedback on high-confidence AI decisions.',tech:['React Native (iOS + Android)','FCM / APNs push notifications','Biometric auth (FaceID/TouchID)','Offline-first with sync-on-connect'],sla:[{val:'<3s',lbl:'Cold start time'},{val:'Real-time',lbl:'Push notification delivery'}],pattern:'Offline-first: critical workflows (browse recommendations, view reports) work offline with last-cached data. Background sync reconciles on connectivity restore without user action.',risk:'Push notification delivery failure on FCM/APNs outage — mitigated by in-app inbox as fallback; critical alerts also delivered via email/SMS as secondary channel.'},
+  cli:{role:'Client — CLI & Automation Tool',purpose:'Command-line interface enabling developers and ops engineers to trigger AI Factory workflows programmatically. Powers batch automation, CI/CD integration, and scheduled jobs. gRPC provides high-performance binary protocol for high-volume automation use cases. API key auth for non-interactive service accounts.',tech:['Python CLI (Click framework)','gRPC + Protobuf (high-performance)','API key authentication','Batch mode with progress streaming'],sla:[{val:'No UI overhead',lbl:'Direct API access'},{val:'Batch-optimized',lbl:'High-volume automation'}],pattern:'12-factor app: configuration via environment variables; no local state; stderr for logs, stdout for results. Enables piping into other tools and CI/CD pipelines.',risk:'API key rotation breaking automation pipelines — mitigated by key rotation grace period (24h overlap); rotation notifications to registered webhook; key expiry warnings 30 days in advance.'},
+  dash:{role:'Client — Analytics Dashboard',purpose:'Grafana-powered real-time operational monitoring dashboard providing AI Factory system health, throughput, and business KPI visibility. WebSocket-backed live updates with <15s metric refresh. Separate from BI dashboards — this is ops-focused: latency histograms, error rates, pod counts, Kafka consumer lag, model accuracy trends.',tech:['Grafana 10 (dashboard)','Prometheus (metrics source)','WebSocket live updates','PagerDuty alert integration'],sla:[{val:'<15s',lbl:'Metric refresh interval'},{val:'Real-time',lbl:'Alert-to-notification latency'}],pattern:'USE methodology dashboards: Utilization, Saturation, Errors for every infrastructure component. Single "wall display" view for on-call engineers; drill-down available but not required for incident response.',risk:'Dashboard itself becoming unavailable during incident — mitigated by dedicated Grafana instance separate from production path; monitoring-as-code (Grafana provisioning) enables instant rebuild.'},
+  cdn:{role:'CDN / Edge — Global Content Delivery',purpose:'CloudFront global CDN serves 95%+ of web/mobile requests from edge locations, eliminating origin round-trips. API response caching for non-personalized content (product catalog, static recommendations) at edge. WAF rules at edge block DDoS, SQL injection, and bot traffic before reaching Kubernetes. Rate limiting enforced at CDN layer.',tech:['AWS CloudFront (global CDN)','WAF rules (OWASP Top 10)','Edge API response caching','Rate limiting (1000 req/min/IP)'],sla:[{val:'95%',lbl:'Edge cache hit rate'},{val:'<50ms',lbl:'Edge response time globally'}],pattern:'Cache-control strategy: static assets (1 year TTL), non-personalized API (5 min TTL), personalized responses (no cache). Surrogate-Key invalidation for instant cache purge on content updates.',risk:'CDN misconfiguration caching personalized responses — mitigated by Vary: Authorization header enforcement; no-store cache control on all authenticated endpoints; automated cache-poisoning tests in CI.'},
+  extc:{role:'External Service — Claude API (Anthropic)',purpose:'The cognitive engine powering all AI Factory intelligence. Claude claude-opus-4 API called by both Claude Orchestrators for planning and synthesis. Rate limited by Anthropic (configurable TPM/RPM). Circuit breaker prevents cascade failure when API is degraded. Responses cached by semantic similarity for 40% cost reduction on repeated query patterns.',tech:['Claude claude-opus-4 API','Anthropic Python SDK','Circuit breaker (tenacity)','Semantic plan cache (Redis)'],sla:[{val:'<2s',lbl:'Complex plan P99'},{val:'Circuit break',lbl:'On >500ms degradation'}],pattern:'Circuit breaker with simplified fallback: when Claude API latency >500ms, circuit opens and orchestrator uses rules-based fallback plan. Business continues at reduced intelligence quality rather than full outage.',risk:'Claude API rate limit exhaustion during traffic spikes — mitigated by token budget per request; Kafka-backed request queue absorbs spikes; priority lanes ensure real-time requests get tokens before batch jobs.'},
+  lb1a:{role:'Network — Load Balancer Zone 1A',purpose:'AWS Application Load Balancer in us-east-1a handling TLS termination, per-IP rate limiting, and HTTP/2 multiplexing. Terminates TLS at the load balancer (certificates managed by AWS ACM with auto-rotation); backend pods communicate over unencrypted HTTP/2 within the VPC. Health checks route traffic away from unhealthy pods within 10 seconds.',tech:['AWS ALB (Application Load Balancer)','TLS 1.3 termination (ACM certificates)','HTTP/2 multiplexing','Health check (10s intervals)'],sla:[{val:'10s',lbl:'Unhealthy pod detection'},{val:'99.99%',lbl:'ALB availability SLA (AWS)'}],pattern:'Layer 7 load balancing: sticky sessions disabled (stateless pods); least-outstanding-requests algorithm distributes traffic to least-busy pod. Connection draining (30s) ensures in-flight requests complete before pod termination.',risk:'Certificate expiry causing TLS failures — architecturally prevented by AWS ACM auto-renewal 60 days before expiry; CloudWatch alert on certificate age >300 days; Terraform enforces ACM-only certificates.'},
+  lb1b:{role:'Network — Load Balancer Zone 1B',purpose:'Redundant AWS ALB in us-east-1b providing active-active high availability. Both 1A and 1B load balancers serve live traffic simultaneously via Route53 weighted routing. If 1A becomes unhealthy, Route53 health checks automatically shift 100% traffic to 1B within 30 seconds. Failover is transparent to clients.',tech:['AWS ALB (Zone 1B)','Route53 weighted routing (50/50)','Automatic failover (health checks)','Cross-zone load balancing'],sla:[{val:'<30s',lbl:'AZ failover time'},{val:'Active-active',lbl:'Both zones serve traffic'}],pattern:'Active-active multi-AZ: traffic split 50/50 across zones normally. On zone failure, Route53 health check detects unhealthy ALB and shifts 100% to surviving zone within TTL (30s). No manual intervention required.',risk:'Route53 health check false positive triggering unnecessary failover — mitigated by 3-of-3 health check consensus before failover; health check endpoint (/healthz) validates database connectivity, not just HTTP 200.'},
+  vault:{role:'Security — HashiCorp Vault',purpose:'Centralized secrets management for all AI Factory credentials: database passwords, API keys (Claude, Databricks, Kafka), TLS certificates, and encryption keys. Dynamic secrets generated per-service with automatic rotation — no static credentials in environment variables or config files. Vault audit log provides compliance trail for all secret access.',tech:['HashiCorp Vault (on Kubernetes)','Dynamic secret generation','AWS KMS (Vault auto-unseal)','Vault Agent (sidecar injection)'],sla:[{val:'Dynamic',lbl:'All secrets rotated automatically'},{val:'Zero static',lbl:'No hardcoded credentials anywhere'}],pattern:'Vault Agent sidecar: each pod has a Vault Agent sidecar that authenticates via Kubernetes Service Account and injects secrets as files. App reads secrets from filesystem; never passes secrets as environment variables.',risk:'Vault itself becoming unavailable blocking all service starts — mitigated by Vault HA (3-node Raft cluster); Vault Agent caches secrets locally so running pods survive brief Vault outage; circuit breaker on Vault calls.'},
+  kafka:{role:'Network — Managed Kafka (Event Bus)',purpose:'Confluent Cloud Managed Kafka serving as the AI Factory\'s event backbone. Multi-AZ topic replication (RF=3) guarantees zero data loss on single-AZ failure. Ingest events, agent results, and audit logs all flow through Kafka topics. Schema Registry enforces Avro contracts preventing schema-incompatible events from reaching consumers.',tech:['Confluent Cloud Kafka (managed)','Schema Registry (Avro contracts)','Multi-AZ replication (RF=3)','KEDA autoscaling on consumer lag'],sla:[{val:'<10ms',lbl:'Produce latency P99'},{val:'7 days',lbl:'Message retention'}],pattern:'Topic-per-domain: separate Kafka topics for each data domain (ingest, agent-results, audit, alerts). Consumer group isolation prevents one slow consumer from impacting others.',risk:'Kafka cluster split-brain on network partition — mitigated by Confluent Cloud managed service SLA; replication factor 3 with min.insync.replicas=2 prevents data loss during single-broker failure.'},
+  api1a:{role:'Control Plane — API Gateway Zone 1A',purpose:'FastAPI-based API gateway running 2 replicas in Zone 1A. Handles authentication (JWT validation against Cognito), request routing to downstream services, response schema validation, and OpenAPI documentation serving. Rate limiting enforced per authenticated user (1000 req/min) and per IP (100 req/min for unauthenticated).',tech:['FastAPI + uvicorn (ASGI)','AWS Cognito JWT validation','OpenAPI 3.1 (auto-generated docs)','Prometheus metrics (/metrics endpoint)'],sla:[{val:'<10ms',lbl:'Auth + routing overhead P99'},{val:'2 replicas',lbl:'Zone 1A pod count'}],pattern:'BFF (Backend for Frontend): separate API gateway routes for web app, mobile, CLI, and internal services. Each BFF optimizes response shape for its client type without polluting core service APIs.',risk:'JWT secret rotation breaking all client authentication — mitigated by RS256 asymmetric keys (only public key needed for validation); key rotation uses kid header for parallel old/new key support during transition.'},
+  api1b:{role:'Control Plane — API Gateway Zone 1B',purpose:'Redundant API gateway in Zone 1B providing active-active HA. Identical configuration to Zone 1A — Kubernetes ConfigMaps ensure configuration parity. HPA scales both zones independently based on CPU. During Zone 1A failure, Zone 1B absorbs all traffic with automatic scale-out triggered by CPU threshold.',tech:['FastAPI (identical config to 1A)','Kubernetes HPA (CPU 70% threshold)','ConfigMap-driven configuration','Pod Anti-Affinity (never same node as 1A)'],sla:[{val:'2 replicas',lbl:'Zone 1B pod count (scales to 10)'},{val:'<60s',lbl:'Scale-out response time'}],pattern:'Pod Anti-Affinity rules prevent Zone 1A and 1B pods from running on the same physical node, ensuring hardware failure cannot take out both zones simultaneously.',risk:'Configuration drift between zones causing inconsistent behavior — mitigated by single Helm chart deploying to both zones; GitOps (ArgoCD) enforces desired state; any manual changes automatically reverted.'},
+  sched:{role:'Control Plane — DAG Scheduler',purpose:'Kubernetes-native workflow scheduler managing complex multi-step AI pipelines: nightly batch processing, scheduled model retraining, report generation, and data quality jobs. Uses Databricks Workflows for Spark-heavy jobs; internal scheduler for lightweight orchestration tasks. Dependency graph prevents downstream jobs from starting before upstream completion.',tech:['Databricks Workflows (Spark jobs)','Kubernetes CronJobs (lightweight)','DAG dependency resolution','Job retry with exponential backoff'],sla:[{val:'99%',lbl:'Scheduled job success rate'},{val:'3x retry',lbl:'Auto-retry on failure'}],pattern:'DAG-based scheduling: all job dependencies declared explicitly. Scheduler computes critical path and parallelizes independent jobs. SLA deadlines tracked per job; early warning alerts at 70% of deadline window.',risk:'Scheduler becoming single point of failure for all batch processing — mitigated by Kubernetes CronJob HA (multiple replicas with leader election); Databricks Workflows has its own HA outside Kubernetes.'},
+  orch1:{role:'Orchestration — Claude Orchestrator (Primary)',purpose:'The primary Claude Orchestrator pod running in Zone 1A. Calls Claude claude-opus-4 API to generate DAG execution plans, dispatches tasks to agent pods, coordinates multi-agent workflows, and synthesizes final responses. 2 vCPU, 4GB RAM per pod. Stateless — workflow state stored in Redis. Auto-scales 3-20 replicas based on queue depth.',tech:['Python + FastAPI (async)','Claude claude-opus-4 API (tool use)','Redis (workflow state)','Prometheus metrics + OpenTelemetry tracing'],sla:[{val:'<2s',lbl:'Plan generation P99'},{val:'3-20',lbl:'Pod auto-scale range'}],pattern:'Stateless orchestrator: zero local state; all state in Redis. Any pod can handle any request. Pod failure loses nothing — Redis holds complete workflow state for resumption by any surviving pod.',risk:'Claude API timeout on complex multi-step planning — mitigated by 30s timeout with simplified fallback plan; circuit breaker prevents cascade; plan complexity cap prevents unbounded planning time.'},
+  orch2:{role:'Orchestration — Claude Orchestrator (Zone 1B)',purpose:'Standby/parallel Claude Orchestrator replica in Zone 1B. In normal operation, handles 50% of traffic (active-active). On Zone 1A failure, absorbs all traffic with HPA scale-out. Identical code and configuration to orch1 — ArgoCD GitOps enforces parity. Independent Claude API connection pool for Zone isolation.',tech:['Identical stack to orch1','Independent Redis connection pool','Zone 1B Kubernetes node affinity','HPA scale-out on queue depth'],sla:[{val:'2 CPUs',lbl:'Per-pod allocation'},{val:'Active-active',lbl:'Always serving traffic (not standby)'}],pattern:'Active-active zone design: both orchestrators serve live traffic normally. No cold-start on failover — orch2 is always warm and load-tested. Zone failover is seamless to users.',risk:'Zone 1B orchestrator running stale code version during rolling update — mitigated by ArgoCD sync ensuring both zones update simultaneously; canary deployment strategy deploys to 1 pod across both zones before full rollout.'},
+  dbc:{role:'Databricks — Primary Compute Cluster',purpose:'Databricks ML Runtime cluster providing the core compute for all AI Factory data and ML workloads: ETL jobs, feature engineering, model training, and ad-hoc analytics. 64 CPU, 256 GB RAM auto-scaling cluster on Photon. Connected to Delta Lake (S3) for storage. MLflow tracking server integrated for experiment management.',tech:['Databricks ML Runtime 14 (Spark 3.5)','Photon columnar engine (10x faster)','64 CPUs · 256 GB RAM (max)','Auto-scaling (2-32 workers)'],sla:[{val:'<30 min',lbl:'30 TB nightly ETL'},{val:'2-32',lbl:'Worker node auto-scale range'}],pattern:'Spot-instance-first: Databricks uses spot/preemptible workers for 80% of compute (60% cost reduction). On-demand workers for the driver and critical job stages. Spot loss handled by Spark task retry.',risk:'Databricks cluster startup time (3-5 min) creating latency for on-demand workloads — mitigated by always-on small cluster (2 workers) for interactive queries; larger clusters pre-warmed 15 minutes before scheduled jobs.'},
+  dbw:{role:'Databricks — Workspace & Notebooks',purpose:'Databricks Workspace serving as the collaborative development environment for data engineers and ML engineers. Notebooks for exploratory analysis, feature engineering prototyping, and model development. SQL Editor for ad-hoc Delta Lake queries. Integrated with MLflow for experiment tracking and Unity Catalog for data governance.',tech:['Databricks Workspace (notebooks + SQL)','Unity Catalog (governance)','MLflow experiment tracking','Git integration (GitHub sync)'],sla:[{val:'Collaborative',lbl:'Multi-user workspace'},{val:'Version-controlled',lbl:'Notebooks in Git'}],pattern:'Notebook-as-code: all notebooks version-controlled in Git via Databricks Repos. Production jobs use .py files, not notebooks — notebooks are for development only. PRs required for production notebook changes.',risk:'Notebook sprawl creating unmanageable number of outdated notebooks — mitigated by automated stale notebook archival (no run in 90 days); monthly cleanup review; separate dev/staging/prod workspace tiers.'},
+  mlf:{role:'Databricks — MLflow Model Registry',purpose:'MLflow Model Registry manages the full lifecycle of all production ML models. Tracks experiments (hyperparameters, metrics, artifacts) during training and manages promotion from staging to production. Auto-rollback on performance degradation. Model cards generated for each production promotion documenting training data, features, and fairness metrics.',tech:['MLflow 2.x (experiment tracking)','Delta Lake artifact storage','Champion/Challenger framework','Automated model cards + fairness eval'],sla:[{val:'0-downtime',lbl:'Model promotion strategy'},{val:'Auto-rollback',lbl:'On >5% accuracy degradation'}],pattern:'GitOps model promotion: model training PR → shadow evaluation → 95% statistical significance → 5% canary traffic → full production. Full lineage from training data version to prediction is auditable.',risk:'Silent model accuracy degradation from distribution shift — mitigated by Evidently AI drift monitoring (PSI > 0.2 triggers retraining); weekly holdout evaluation against recent ground truth.'},
+  monit:{role:'Databricks — Prometheus & Grafana Monitoring',purpose:'Full-stack observability platform: Prometheus scrapes metrics from all pods, Databricks, and infrastructure every 15 seconds. Grafana provides operational dashboards and alerting. DataDog APM for distributed tracing. PagerDuty receives critical alerts with auto-escalation. On-call rotation managed via PagerDuty schedules.',tech:['Prometheus + PromQL (metrics)','Grafana 10 (dashboards + alerting)','OpenTelemetry (distributed traces)','PagerDuty (on-call + escalation)'],sla:[{val:'15s',lbl:'Metric scrape interval'},{val:'<2 min',lbl:'Alert-to-PagerDuty latency'}],pattern:'RED method dashboards (Rate, Errors, Duration) for every service. USE method (Utilization, Saturation, Errors) for every infrastructure resource. SLO tracking with error budget burn rate alerts.',risk:'Monitoring system itself failing silently — mitigated by dead-man\'s switch: Prometheus sends heartbeat to external watchdog (Better Uptime); if heartbeat stops, external alert fires even when internal monitoring is down.'},
+  delta:{role:'Storage — Delta Lake (30 TB)',purpose:'The primary data lake storing all AI Factory data in Delta format on S3. ACID transactions, time travel (30-day history), and unified batch + streaming processing on 30 TB of structured and semi-structured data. Three-tier medallion architecture: Bronze (raw), Silver (validated), Gold (business aggregates). All model training data sourced from Delta.',tech:['Delta Lake 3.x on S3','ACID transactions + time travel','Medallion (Bronze/Silver/Gold)','Z-ORDER + liquid clustering'],sla:[{val:'30 TB',lbl:'Current data volume'},{val:'~$200/mo',lbl:'Storage cost (S3 + compression)'}],pattern:'Immutable Bronze layer: raw data never modified after ingestion. All corrections applied in Silver via MERGE. Enables full audit lineage from Gold metrics back to raw source events.',risk:'Accidental data deletion without recovery capability — mitigated by S3 Object Lock (WORM) on Bronze prefix; Delta VACUUM blocked on Bronze tables; minimum 30-day time travel for point-in-time recovery.'},
+  redis:{role:'Storage — Redis Cache Cluster',purpose:'Redis 7 Cluster (3 nodes, 16 GB) providing the low-latency data layer: ML feature cache (<1ms), session state, rate limit counters, in-flight workflow state, and plan similarity cache. Multi-AZ replication provides HA. AOF persistence prevents data loss on restart. LRU eviction automatically manages memory under pressure.',tech:['Redis 7 Cluster (3 nodes · 16 GB)','TLS in-transit + at-rest encryption','AOF + RDB persistence','Multi-AZ replica set'],sla:[{val:'<1ms',lbl:'Read P99'},{val:'99.99%',lbl:'Multi-AZ availability'}],pattern:'Cache-aside with calibrated TTL: rate limits (60s), session (24h), ML features (5min), workflow state (24h), plan cache (1h). Lua scripts for atomic compare-and-swap operations preventing race conditions.',risk:'Cache stampede on mass expiry — mitigated by probabilistic early expiry (PER algorithm): keys proactively refreshed with probability increasing as TTL approaches zero, spreading refresh load.'},
+  pg:{role:'Storage — PostgreSQL (Multi-AZ)',purpose:'Aurora PostgreSQL 15 Multi-AZ cluster storing structured operational data: request/response audit log, user preferences, A/B experiment results, and model performance metrics. Read replicas for analytics queries. pg_partman manages monthly partitioning with automated archival to Delta Lake after 90 days.',tech:['AWS Aurora PostgreSQL 15 Multi-AZ','pg_partman (automated partitioning)','Read replicas (analytics isolation)','pg_trgm (full-text search)'],sla:[{val:'99.99%',lbl:'Aurora Multi-AZ availability'},{val:'<1s',lbl:'Primary failover time (Aurora)'}],pattern:'CQRS: writes go to Aurora primary; analytics reads go to read replicas. Prevents reporting queries from starving transactional writes. pg_partman monthly partitions enable O(1) archival via partition detach.',risk:'Aurora storage growth from high-volume audit logging — mitigated by pg_partman automated archival to Delta Lake after 90 days (10x cheaper); S3 archive enables full audit history at low cost.'},
+  dr:{role:'Storage — US-West Disaster Recovery',purpose:'Active passive DR deployment in us-west-2. Kubernetes cluster scaled down to 1-2 pods (pilot light) to minimize cost while enabling rapid scale-out. PostgreSQL read replica with <15-minute replication lag. Delta Lake S3 cross-region replication (async) with <1-hour RPO. Promoted to active region in <15 minutes via automated Route53 failover.',tech:['EKS cluster (us-west-2, 1-2 pods)','Aurora read replica (async replication)','S3 cross-region replication (Delta Lake)','Route53 automated failover'],sla:[{val:'<15 min',lbl:'RTO (failover to DR)'},{val:'<1 hr',lbl:'RPO (Delta Lake data loss)'}],pattern:'Pilot light DR: minimal resources always running in DR region, instantly scalable. Pre-configured but scaled down. Monthly DR drill tests full failover procedure to validate RTO/RPO targets.',risk:'DR cluster running outdated container images at time of failover — mitigated by ECR cross-region replication keeping DR registry in sync; DR Kubernetes deployment spec always matches production.'},
+};
+
+/* ── RENDER ENGINE ── */
+let _sel=null, eg, ng, dg;
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('diagram');
+function mk(t,a={}){const e=document.createElementNS(NS,t);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+
+function init(){
+  const defs=svg.querySelector('defs');
+  for(const n of NODES){
+    const g=mk('linearGradient',{id:'grad-'+n.id,x1:'0%',y1:'0%',x2:'100%',y2:'100%'});
+    [[0,n.grad[0]],[100,n.grad[1]]].forEach(([o,c])=>{const s=mk('stop',{offset:o+'%','stop-color':c});g.appendChild(s);});
+    defs.appendChild(g);
+  }
+  for(const s of SECTIONS)drawStrip(s);
+  eg=mk('g');ng=mk('g');dg=mk('g');
+  svg.appendChild(eg);svg.appendChild(ng);svg.appendChild(dg);
+  EDGES.forEach(e=>drawEdge(e));
+  NODES.forEach(n=>drawNode(n));
+  EDGES.forEach(e=>addDots(e));
+  svg.addEventListener('click',()=>clearSel());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel();});
+  buildNavPane();
+  document.getElementById('np-search').addEventListener('input',filterNav);
+}
+
+function drawStrip(s){
+  const g=mk('g');
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:20,fill:s.strip}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
+  const t=mk('text',{x:14,y:s.rowStart+14,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.1em'});
+  t.textContent=s.label;g.appendChild(t);
+  g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
+  svg.insertBefore(g,svg.firstChild);
+}
+
+function gn(id){return NODES.find(n=>n.id===id);}
+
+function drawEdge(e){
+  const n1=gn(e.from),n2=gn(e.to);
+  const d=e.path||ap(n1,n2);
+  e._d=d;
+  const p=mk('path',{d,stroke:e.color,'stroke-width':e.dashed?'1.5':'1.9',fill:'none',opacity:'0.45','marker-end':'url(#arrowhead)'});
+  if(e.dashed)p.setAttribute('stroke-dasharray','6,4');
+  p.setAttribute('data-from',e.from);p.setAttribute('data-to',e.to);
+  p.style.transition='opacity .25s';
+  eg.appendChild(p);
+}
+
+function drawNode(n){
+  const W=n.w||165,H=n.h||54,g=mk('g');
+  g.setAttribute('data-node-id',n.id);
+  g.style.cursor='pointer';g.style.transition='opacity .25s';
+  g.appendChild(mk('rect',{x:n.x-W/2-10,y:n.y-H/2-10,width:W+20,height:H+20,rx:17,fill:'transparent'}));
+  g.appendChild(mk('rect',{x:n.x-W/2-7,y:n.y-H/2-7,width:W+14,height:H+14,rx:16,fill:'none',stroke:n.stroke,'stroke-width':'2.5',opacity:'0'}));
+  g.appendChild(mk('rect',{x:n.x-W/2-4,y:n.y-H/2-4,width:W+8,height:H+8,rx:15,fill:'none',stroke:n.stroke,'stroke-width':'2',opacity:'0.16',filter:'url(#nglow)'}));
+  g.appendChild(mk('rect',{x:n.x-W/2,y:n.y-H/2,width:W,height:H,rx:11,fill:`url(#grad-${n.id})`,stroke:n.stroke,'stroke-width':'1.6',filter:'url(#shadow)'}));
+  const lb=mk('text',{x:n.x,y:n.y-(n.sub?7:5),'text-anchor':'middle',fill:'#FFFFFF','font-size':n.fs||'12.5','font-weight':'700','font-family':'system-ui,sans-serif'});
+  lb.textContent=n.label;g.appendChild(lb);
+  if(n.sub){const sb=mk('text',{x:n.x,y:n.y+10,'text-anchor':'middle',fill:'rgba(255,255,255,.58)','font-size':'9','font-family':'system-ui,sans-serif'});sb.textContent=n.sub;g.appendChild(sb);}
+  g.addEventListener('click',e=>{e.stopPropagation();selectNode(n.id);});
+  ng.appendChild(g);
+}
+
+function addDots(e){
+  const d=e._d,cnt=e.dots||2;
+  for(let i=0;i<cnt;i++){
+    const og=mk('circle',{r:'8',fill:e.color,opacity:'0.17',filter:'url(#glow)'});
+    og.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(og);
+    const c=mk('circle',{r:'4',fill:e.color,opacity:'0.95',filter:'url(#glow)'});
+    c.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(c);
+  }
+}
+
+function selectNode(id){
+  if(_sel===id){clearSel();return;}
+  _sel=id;
+  dg.style.opacity='0.18';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{
+    const nid=g.getAttribute('data-node-id');
+    const isSel=nid===id;
+    const isConn=EDGES.some(e=>(e.from===id&&e.to===nid)||(e.to===id&&e.from===nid));
+    g.style.opacity=isSel?'1':(isConn?'0.85':'0.12');
+    const sr=g.children[1];
+    sr.setAttribute('opacity',isSel?'0.55':'0');
+    if(isSel){const n=NODES.find(n=>n.id===id);if(n)sr.setAttribute('stroke',n.stroke);}
+  });
+  eg.querySelectorAll('[data-from]').forEach(p=>{
+    const isConn=p.getAttribute('data-from')===id||p.getAttribute('data-to')===id;
+    p.style.opacity=isConn?'0.85':'0.04';
+  });
+  showDp(id);
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.toggle('sel',b.getAttribute('data-nav-id')===id));
+  const btn=document.querySelector(`.nnb[data-nav-id="${id}"]`);
+  if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function clearSel(){
+  if(!_sel)return;
+  _sel=null;
+  dg.style.opacity='1';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{g.style.opacity='1';if(g.children[1])g.children[1].setAttribute('opacity','0');});
+  eg.querySelectorAll('[data-from]').forEach(p=>{p.style.opacity='0.45';});
+  closeDp();
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.remove('sel'));
+}
+
+function showDp(id){
+  const n=NODES.find(n=>n.id===id);
+  const d=NODE_DETAILS[id];
+  if(!n||!d)return;
+  document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
+  document.getElementById('dp-role').textContent=d.role;
+  document.getElementById('dp-name').textContent=n.label;
+  document.getElementById('dp-sub').textContent=n.sub||'';
+  const conns=getConns(id);
+  document.getElementById('dp-body').innerHTML=`
+    <div><div class="dp-sl">Purpose & Architecture</div><div class="dp-purpose">${d.purpose}</div></div>
+    <div><div class="dp-sl">Technology Stack</div><div class="dp-chips">${d.tech.map(t=>`<span class="dp-chip">${t}</span>`).join('')}</div></div>
+    <div><div class="dp-sl">Performance SLA</div><div class="dp-grid">${d.sla.map(s=>`<div class="dp-metric"><div class="dp-mv">${s.val}</div><div class="dp-ml">${s.lbl}</div></div>`).join('')}</div></div>
+    <div class="dp-pat"><div class="dp-pat-l">Architectural Pattern</div><div class="dp-pat-v">${d.pattern}</div></div>
+    <div><div class="dp-sl">Connected Components</div><div class="dp-conns">${conns.length?conns.map(c=>`<div class="dp-conn" onclick="event.stopPropagation();selectNode('${c.id}')"><span class="dp-dir ${c.dir}">${c.dir==='in'?'← FROM':'→ TO'}</span><span class="dp-cn">${c.label}</span></div>`).join(''):'<div class="no-conn">No direct connections</div>'}</div></div>
+    <div class="dp-risk"><div class="dp-risk-l">⚠ Risk &amp; Mitigation</div><div class="dp-risk-v">${d.risk}</div></div>`;
+  document.getElementById('dp').classList.add('open');
+}
+
+function getConns(id){
+  const seen=new Set(),r=[];
+  EDGES.forEach(e=>{
+    if(e.from===id){const n=gn(e.to);if(n&&!seen.has('out'+e.to)){seen.add('out'+e.to);r.push({id:e.to,label:n.label,dir:'out'});}}
+    if(e.to===id){const n=gn(e.from);if(n&&!seen.has('in'+e.from)){seen.add('in'+e.from);r.push({id:e.from,label:n.label,dir:'in'});}}
+  });
+  return r;
+}
+
+function closeDp(){document.getElementById('dp').classList.remove('open');}
+function toggleNp(){document.getElementById('np').classList.toggle('open');}
+
+function buildNavPane(){
+  const body=document.getElementById('np-body');
+  SECTIONS.forEach(sec=>{
+    const secNodes=NODES.filter(n=>n.y>=sec.rowStart&&n.y<sec.rowStart+sec.rowH);
+    if(!secNodes.length)return;
+    const wrap=document.createElement('div');
+    const hdr=document.createElement('div');hdr.className='nsh';
+    hdr.innerHTML=`<div class="nsh-bar" style="background:${sec.bar}"></div><span class="nsh-lbl">${sec.label}</span><span class="nsh-chev">▾</span>`;
+    const nodesDiv=document.createElement('div');nodesDiv.className='nsn';
+    hdr.onclick=()=>{hdr.classList.toggle('col');nodesDiv.classList.toggle('hid');};
+    secNodes.forEach(n=>{
+      const d=NODE_DETAILS[n.id]||{};
+      const btn=document.createElement('button');btn.className='nnb';btn.setAttribute('data-nav-id',n.id);
+      btn.innerHTML=`<div class="nn-sw" style="background:linear-gradient(135deg,${n.grad[0]},${n.grad[1]});border-color:${n.stroke}40"></div><div class="nn-info"><div class="nn-name">${n.label}</div><div class="nn-role">${d.role||''}</div></div>`;
+      btn.onclick=()=>selectNode(n.id);
+      nodesDiv.appendChild(btn);
+    });
+    wrap.appendChild(hdr);wrap.appendChild(nodesDiv);body.appendChild(wrap);
+  });
+}
+
+function filterNav(){
+  const q=this.value.toLowerCase();
+  document.querySelectorAll('.nnb').forEach(btn=>{
+    const nm=btn.querySelector('.nn-name').textContent.toLowerCase();
+    const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
+    btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
+  });
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Application Architecture — AI Factory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080610;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;overflow:hidden;height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(192,132,252,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(192,132,252,.03) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(8,6,16,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-left{display:flex;align-items:center;gap:12px;min-width:0}
+.back{color:#64748B;text-decoration:none;font-size:12px;white-space:nowrap;transition:color .2s}.back:hover{color:#E2E8F0}
+.vdiv{width:1px;height:20px;background:rgba(255,255,255,.1)}
+.nav-role{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#C084FC;margin-bottom:2px}
+.nav-title{font-size:13px;font-weight:700;color:#F1F5F9;white-space:nowrap}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:#C084FC;border-color:rgba(192,132,252,.28);background:rgba(192,132,252,.08)}
+
+.legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(8,6,16,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#64748B;white-space:nowrap}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
+.leg-pulse{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:lp 1.5s infinite}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116px)}
+
+/* ── NAV PANE ── */
+.np{position:fixed;top:116px;left:-248px;width:274px;height:calc(100vh - 116px);z-index:250;background:rgba(6,4,14,.97);border-right:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:left .38s cubic-bezier(.4,0,.2,1)}
+.np.open{left:0}
+.np-tab{position:absolute;top:50%;right:0;transform:translateY(-50%);width:26px;height:96px;cursor:pointer;background:rgba(192,132,252,.07);border-left:2px solid rgba(192,132,252,.2);border-radius:0 10px 10px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:all .2s}
+.np-tab:hover{background:rgba(192,132,252,.13)}
+.np-tab-txt{writing-mode:vertical-lr;text-orientation:mixed;font-size:7.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(192,132,252,.75);transform:rotate(180deg)}
+.np-tab-ico{font-size:12px;color:rgba(192,132,252,.5);transition:transform .35s}
+.np.open .np-tab-ico{transform:rotate(180deg)}
+.np-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.np-head-lbl{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:10px}
+.np-search{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:7px 10px 7px 30px;font-size:12px;color:#E2E8F0;outline:none;transition:all .2s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='rgba(255,255,255,.25)' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+.np-search:focus{border-color:rgba(192,132,252,.4);background-color:rgba(192,132,252,.06)}
+.np-search::placeholder{color:rgba(255,255,255,.2)}
+.np-body{flex:1;overflow-y:auto;padding-bottom:20px}
+.np-body::-webkit-scrollbar{width:3px}.np-body::-webkit-scrollbar-track{background:transparent}.np-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.nsh{display:flex;align-items:center;gap:7px;padding:10px 10px 5px;cursor:pointer;user-select:none;transition:background .15s}
+.nsh:hover{background:rgba(255,255,255,.03)}
+.nsh-bar{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.nsh-lbl{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;flex:1;color:rgba(255,255,255,.32)}
+.nsh-chev{font-size:9px;color:rgba(255,255,255,.18);transition:transform .25s}
+.nsh.col .nsh-chev{transform:rotate(-90deg)}
+.nsn{padding:0 5px 4px;display:flex;flex-direction:column;gap:2px}
+.nsn.hid{display:none}
+.nnb{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:transparent;transition:all .15s;text-align:left;width:100%}
+.nnb:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.07)}
+.nnb.sel{background:rgba(192,132,252,.1);border-color:rgba(192,132,252,.3)}
+.nn-sw{width:28px;height:28px;border-radius:7px;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.nn-info{flex:1;min-width:0}
+.nn-name{font-size:11px;font-weight:700;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nn-role{font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+/* ── DETAIL PANEL ── */
+.dp{position:fixed;top:116px;right:-392px;width:382px;height:calc(100vh - 116px);z-index:250;background:rgba(6,4,14,.97);border-left:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:right .38s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.dp.open{right:0}
+.dp-hero{flex-shrink:0;height:104px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;overflow:hidden}
+.dp-hero-bg{position:absolute;inset:0}
+.dp-hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.3) 100%)}
+.dp-hero-txt{position:relative;z-index:1;min-width:0}
+.dp-hero-role{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}
+.dp-hero-name{font-size:18px;font-weight:900;color:#fff;line-height:1.05}
+.dp-hero-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:5px}
+.dp-close{position:absolute;top:10px;right:10px;z-index:2;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#94A3B8;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dp-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.dp-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.dp-body::-webkit-scrollbar{width:3px}.dp-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.dp-sl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:7px}
+.dp-purpose{font-size:12px;line-height:1.72;color:rgba(255,255,255,.68)}
+.dp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.dp-chip{padding:3px 9px;border-radius:100px;font-size:10.5px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.62)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.dp-metric{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px}
+.dp-mv{font-size:17px;font-weight:900;color:#fff;line-height:1}
+.dp-ml{font-size:9px;color:rgba(255,255,255,.36);margin-top:3px}
+.dp-pat{background:rgba(192,132,252,.07);border:1px solid rgba(192,132,252,.18);border-radius:10px;padding:11px 13px}
+.dp-pat-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(192,132,252,.55);margin-bottom:5px}
+.dp-pat-v{font-size:12px;font-weight:700;color:rgba(216,180,254,.9);line-height:1.5}
+.dp-conns{display:flex;flex-direction:column;gap:5px}
+.dp-conn{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .15s}
+.dp-conn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.13)}
+.dp-dir{font-size:7.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 6px;border-radius:100px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.dp-dir.in{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.25);color:#38BDF8}
+.dp-dir.out{background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.25);color:#FB923C}
+.dp-cn{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.72)}
+.dp-risk{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.16);border-radius:10px;padding:11px 13px}
+.dp-risk-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(248,113,113,.55);margin-bottom:5px}
+.dp-risk-v{font-size:11.5px;line-height:1.65;color:rgba(255,255,255,.6)}
+.no-conn{font-size:11px;color:rgba(255,255,255,.25);padding:6px 4px}
+.brief-bar{position:fixed;top:82px;left:0;right:0;z-index:185;height:34px;display:flex;align-items:center;padding:0 28px;gap:10px;background:rgba(255,255,255,.022);border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;color:rgba(255,255,255,.42);font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden}
+.brief-bar strong{color:rgba(255,255,255,.7);font-weight:600}
+.brief-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;opacity:.75}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="back">← Back</a>
+    <div class="vdiv"></div>
+    <div>
+      <div class="nav-role">Chief Application Architect</div>
+      <div class="nav-title">Application Architecture — AI Factory</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="01-technical.html"   class="nav-link">⚙ Technical</a>
+      <a href="02-application.html" class="nav-link active">🔗 Application</a>
+      <a href="03-data.html"        class="nav-link">🗄 Data</a>
+      <a href="04-business.html"    class="nav-link">📈 Business</a>
+    </div>
+  </div>
+</nav>
+
+<div class="legend-bar">
+  <div class="leg-item"><div class="leg-dot" style="background:#3B82F6"></div>User / Request</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#F87171"></div>Orchestrator</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FB923C"></div>Agents</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FACC15"></div>Tools</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#4ADE80"></div>Databricks</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#38BDF8"></div>State / Cache</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#2DD4BF"></div>Response</div>
+  <div class="leg-sep"></div>
+  <div class="leg-item" style="color:#C084FC"><div class="leg-pulse" style="background:#C084FC"></div>Live data flow</div>
+</div>
+
+<!-- BRIEF -->
+<div class="brief-bar">
+  <div class="brief-dot" style="background:#C084FC"></div>
+  A request enters via API or WebSocket, Claude orchestrates planning and agent dispatch, specialist tools query ML systems, and a synthesized response is delivered in under 500ms P99. <strong>The full request-to-response lifecycle.</strong>
+</div>
+
+<!-- NAV PANE -->
+<div class="np" id="np">
+  <div class="np-tab" onclick="toggleNp()">
+    <span class="np-tab-txt">Navigator</span>
+    <span class="np-tab-ico">◀</span>
+  </div>
+  <div class="np-head">
+    <div class="np-head-lbl">Architecture Navigator</div>
+    <input class="np-search" id="np-search" placeholder="Search components…" autocomplete="off">
+  </div>
+  <div class="np-body" id="np-body"></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="dp" id="dp">
+  <div class="dp-hero" id="dp-hero">
+    <div class="dp-hero-bg" id="dp-hero-bg"></div>
+    <div class="dp-hero-ov"></div>
+    <div class="dp-hero-txt">
+      <div class="dp-hero-role" id="dp-role"></div>
+      <div class="dp-hero-name" id="dp-name"></div>
+      <div class="dp-hero-sub"  id="dp-sub"></div>
+    </div>
+    <button class="dp-close" onclick="closeDp()">✕</button>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<svg id="diagram" viewBox="0 0 1500 830" preserveAspectRatio="xMidYMid meet">
+<defs>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="nglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+  </filter>
+  <filter id="shadow">
+    <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+  </filter>
+  <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M 0,1 L 9,5 L 0,9 Z" fill="rgba(255,255,255,0.5)"/>
+  </marker>
+</defs>
+</svg>
+
+<script>
+const SECTIONS=[
+  {label:'REQUEST ENTRY',                      rowStart:50,  rowH:122, strip:'rgba(59,130,246,.14)',  bar:'#3B82F6', lc:'rgba(147,197,253,.95)'},
+  {label:'CLAUDE ORCHESTRATOR — CONTROL LOOP', rowStart:172, rowH:122, strip:'rgba(248,113,113,.13)', bar:'#F87171', lc:'rgba(252,165,165,.95)'},
+  {label:'MULTI-AGENT COORDINATION',           rowStart:294, rowH:122, strip:'rgba(251,146,60,.13)',  bar:'#FB923C', lc:'rgba(253,186,116,.95)'},
+  {label:'TOOL INVOCATION LAYER',              rowStart:416, rowH:122, strip:'rgba(234,179,8,.13)',   bar:'#EAB308', lc:'rgba(253,224,71,.95)'},
+  {label:'DATABRICKS INTEGRATION',             rowStart:538, rowH:116, strip:'rgba(74,222,128,.13)',  bar:'#4ADE80', lc:'rgba(134,239,172,.95)'},
+  {label:'STATE & DATA FLOW',                  rowStart:654, rowH:112, strip:'rgba(56,189,248,.13)',  bar:'#38BDF8', lc:'rgba(125,211,252,.95)'},
+  {label:'RESPONSE PIPELINE',                  rowStart:766, rowH:64,  strip:'rgba(45,212,191,.13)',  bar:'#2DD4BF', lc:'rgba(153,246,228,.95)'},
+];
+const NODES=[
+  {id:'user',   label:'User / External',   sub:'API · WebSocket · gRPC',    x:180, y:84,  grad:['#1E3A8A','#2563EB'], stroke:'#60A5FA'},
+  {id:'req',    label:'Request Queue',     sub:'JSON · Async · Validation',  x:470, y:84,  grad:['#1E3A8A','#1D4ED8'], stroke:'#93C5FD'},
+  {id:'parse',  label:'Parse',             sub:'Intent · Validate · Limits', x:180, y:206, grad:['#7F1D1D','#B91C1C'], stroke:'#F87171'},
+  {id:'plan',   label:'Plan (Claude)',     sub:'DAG · Task Breakdown',       x:470, y:206, grad:['#7F1D1D','#DC2626'], stroke:'#F87171'},
+  {id:'decide', label:'Decide',            sub:'Tool Select · Model Choice',  x:760, y:206, grad:['#7F1D1D','#DC2626'], stroke:'#FCA5A5'},
+  {id:'disp',   label:'Dispatch',          sub:'Queue · Priority · Balance',  x:1050,y:206, grad:['#7F1D1D','#B91C1C'], stroke:'#F87171'},
+  {id:'montr',  label:'Monitor',           sub:'Health · Progress · Errors',  x:1340,y:206, grad:['#4A1942','#9D174D'], stroke:'#F472B6'},
+  {id:'ag1',    label:'Agent 1',           sub:'Data Analyst · SQL · Insights',x:200,y:328, grad:['#431407','#C2410C'], stroke:'#FB923C'},
+  {id:'ag2',    label:'Agent 2',           sub:'ML Engineer · Model · SHAP',   x:530,y:328, grad:['#431407','#EA580C'], stroke:'#FB923C'},
+  {id:'ag3',    label:'Agent 3',           sub:'Decision Maker · Rules',       x:860,y:328, grad:['#431407','#C2410C'], stroke:'#FB923C'},
+  {id:'coord',  label:'Coordinator',       sub:'Claude · Conflict Resolution', x:1190,y:328, grad:['#451A03','#92400E'], stroke:'#FCD34D'},
+  {id:'tsql',   label:'SQL Tool',          sub:'Databricks SQL · Delta Lake',  x:200, y:450, grad:['#713F12','#A16207'], stroke:'#FACC15'},
+  {id:'tfeat',  label:'Feature Tool',      sub:'Feature Store · Spark Jobs',   x:480, y:450, grad:['#713F12','#B45309'], stroke:'#FCD34D'},
+  {id:'tpred',  label:'Predict Tool',      sub:'ML Model API · Batch Score',   x:760, y:450, grad:['#3B0764','#6D28D9'], stroke:'#C084FC'},
+  {id:'tclaude',label:'Claude Analysis',   sub:'Text · Code · Reasoning',      x:1040,y:450, grad:['#3B0764','#7E22CE'], stroke:'#A78BFA'},
+  {id:'trec',   label:'Recommend Tool',    sub:'Multi-arm Bandit · Rules',     x:1320,y:450, grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8'},
+  {id:'dbsql',  label:'Databricks SQL',    sub:'Query Engine · C2D Table',     x:250, y:572, grad:['#14532D','#15803D'], stroke:'#4ADE80'},
+  {id:'spark',  label:'Spark Cluster',     sub:'ETL · Feature Engineering',    x:600, y:572, grad:['#14532D','#166534'], stroke:'#4ADE80'},
+  {id:'fstore', label:'Feature Store',     sub:'Online · Offline · Serving',   x:950, y:572, grad:['#065F46','#047857'], stroke:'#34D399'},
+  {id:'mlreg',  label:'MLflow Registry',   sub:'Production Models · Versioning',x:1290,y:572, grad:['#065F46','#059669'],stroke:'#34D399'},
+  {id:'cache',  label:'Cache / Redis',     sub:'Hot Features · In-Memory',     x:300, y:688, grad:['#0C4A6E','#075985'], stroke:'#38BDF8'},
+  {id:'queue',  label:'Result Queue',      sub:'Kafka · Event Stream',         x:730, y:688, grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8'},
+  {id:'state',  label:'State Store',       sub:'Distributed KV · Workflow',    x:1160,y:688, grad:['#1E3A8A','#1D4ED8'], stroke:'#60A5FA'},
+  {id:'fmt',    label:'Format Response',   sub:'JSON · HTML · Visualization',  x:300, y:792, grad:['#134E4A','#0D9488'], stroke:'#2DD4BF'},
+  {id:'store',  label:'Store Result',      sub:'Database · Archive',           x:730, y:792, grad:['#134E4A','#047857'], stroke:'#34D399'},
+  {id:'dlvr',   label:'Deliver → User',    sub:'API Response · Webhook',       x:1160,y:792, grad:['#1E3A8A','#2563EB'], stroke:'#60A5FA'},
+];
+const EDGES=[
+  {from:'user',   to:'req',    color:'#60A5FA',dur:1.8,begin:0.0},
+  {from:'req',    to:'parse',  color:'#93C5FD',dur:1.5,begin:0.2},
+  {from:'parse',  to:'plan',   color:'#F87171',dur:1.5,begin:0.0},
+  {from:'plan',   to:'decide', color:'#F87171',dur:1.5,begin:0.5},
+  {from:'decide', to:'disp',   color:'#F87171',dur:1.5,begin:1.0},
+  {from:'disp',   to:'montr',  color:'#F472B6',dur:1.5,begin:0.3},
+  {from:'montr',  to:'plan',   color:'#F472B6',dur:3.5,begin:0.5,dashed:true,path:'M 1340,178 C 1340,120 470,120 470,178',dots:1},
+  {from:'disp',   to:'ag1',    color:'#FB923C',dur:2.0,begin:0.0,path:'M 1050,234 C 1050,295 200,295 200,300'},
+  {from:'disp',   to:'ag2',    color:'#FB923C',dur:2.0,begin:0.4,path:'M 1050,234 C 1050,290 530,290 530,300'},
+  {from:'disp',   to:'ag3',    color:'#FB923C',dur:2.0,begin:0.8,path:'M 1050,234 C 1050,290 860,290 860,300'},
+  {from:'disp',   to:'coord',  color:'#FCD34D',dur:2.0,begin:1.2},
+  {from:'ag1',    to:'ag2',    color:'#FB923C',dur:2.0,begin:0.5,path:'M 283,328 C 380,315 430,315 447,328',dots:1},
+  {from:'ag2',    to:'ag3',    color:'#FB923C',dur:2.0,begin:0.8,path:'M 613,328 C 710,315 760,315 777,328',dots:1},
+  {from:'ag1',    to:'coord',  color:'#FCD34D',dur:2.5,begin:0.3,path:'M 200,356 C 200,380 1190,380 1190,356',dots:1},
+  {from:'ag2',    to:'coord',  color:'#FCD34D',dur:2.5,begin:0.8,path:'M 530,356 C 530,375 1190,375 1190,356',dots:1},
+  {from:'ag3',    to:'coord',  color:'#FCD34D',dur:2.5,begin:1.2,path:'M 860,356 C 860,370 1190,370 1190,356',dots:1},
+  {from:'ag1',    to:'tsql',   color:'#FACC15',dur:1.8,begin:0.0},
+  {from:'ag2',    to:'tpred',  color:'#C084FC',dur:1.8,begin:0.5},
+  {from:'ag3',    to:'trec',   color:'#38BDF8',dur:1.8,begin:1.0},
+  {from:'plan',   to:'tclaude',color:'#A78BFA',dur:2.0,begin:0.3,path:'M 470,234 C 470,330 1040,330 1040,422'},
+  {from:'tsql',   to:'dbsql',  color:'#4ADE80',dur:2.0,begin:0.0},
+  {from:'tfeat',  to:'fstore', color:'#34D399',dur:2.0,begin:0.5,path:'M 480,478 C 480,535 950,535 950,544'},
+  {from:'tpred',  to:'mlreg',  color:'#34D399',dur:2.0,begin:1.0,path:'M 760,478 C 760,540 1290,540 1290,544'},
+  {from:'tsql',   to:'spark',  color:'#4ADE80',dur:2.5,begin:1.2,path:'M 250,478 C 250,540 600,540 600,544'},
+  {from:'dbsql',  to:'cache',  color:'#38BDF8',dur:2.0,begin:0.0},
+  {from:'fstore', to:'queue',  color:'#38BDF8',dur:2.0,begin:0.7,path:'M 950,600 C 950,650 730,650 730,660'},
+  {from:'mlreg',  to:'queue',  color:'#38BDF8',dur:2.0,begin:1.4,path:'M 1290,600 C 1290,650 730,650 730,660'},
+  {from:'cache',  to:'fmt',    color:'#2DD4BF',dur:2.0,begin:0.0},
+  {from:'queue',  to:'store',  color:'#34D399',dur:2.0,begin:0.5},
+  {from:'state',  to:'dlvr',   color:'#60A5FA',dur:2.0,begin:1.0},
+  {from:'coord',  to:'fmt',    color:'#2DD4BF',dur:2.5,begin:0.5,path:'M 1190,356 C 1190,580 300,580 300,764'},
+  {from:'dlvr',   to:'user',   color:'#60A5FA',dur:4.0,begin:1.5,path:'M 1160,764 C 1400,750 1450,50 180,112',dashed:true,dots:1},
+];
+
+const NODE_DETAILS={
+  user:{role:'Client Interface',purpose:'Primary interaction surface accepting requests from all consumer types. REST handles synchronous CRUD, WebSocket maintains persistent bidirectional channels for streaming AI responses, gRPC handles high-performance internal service calls. All traffic passes through CloudFront CDN before reaching origin, absorbing 95% of requests at the edge.',tech:['React 18 / PWA','WebSocket API','gRPC / Protobuf','OAuth2 PKCE + PKCE'],sla:[{val:'<50ms',lbl:'TTFB at CDN edge'},{val:'99.9%',lbl:'Availability SLA'}],pattern:'Fan-in normalization: all channels normalized to internal request envelope before any processing. Channel metadata preserved for downstream personalization.',risk:'DDoS amplification via WebSocket connections — mitigated by CloudFront WAF rate limiting (1000 req/min per IP) and connection per-IP cap (50 concurrent).'},
+  req:{role:'Async Request Buffer',purpose:'Kafka-backed queue decouples ingestion from processing, enabling backpressure handling and independent scaling. Validates JSON schemas, assigns priority (0–100) based on request type, and deduplicates using idempotency keys. Provides durable at-least-once delivery guaranteeing no requests are dropped under load.',tech:['Apache Kafka','JSON Schema Registry','Redis (dedup + rate limit)','Pydantic v2 validation'],sla:[{val:'100K',lbl:'Messages/second'},{val:'<10ms',lbl:'Enqueue latency P99'}],pattern:'CQRS: command requests and query requests routed to separate Kafka topics with independent consumer groups allowing differentiated SLA management.',risk:'Kafka partition rebalancing causing 30s consumer pause — mitigated by graceful shutdown with max.poll.interval awareness; cooperative sticky assignor eliminates stop-the-world rebalancing.'},
+  parse:{role:'Request Normalizer',purpose:'Extracts structured intent from raw request payloads using Pydantic v2 models (sub-millisecond validation). Enforces per-tenant rate limits via Redis sliding window counters. Detects and rejects malformed, oversized, or injection-attempt payloads before any downstream resource is consumed.',tech:['FastAPI + Pydantic v2','Redis sliding window','OpenAPI 3.1 schemas','Intent classifier (LightGBM)'],sla:[{val:'<5ms',lbl:'Validation P99'},{val:'50K',lbl:'Throughput (req/s per pod)'}],pattern:'Chain-of-responsibility: schema validation → rate limit check → intent classification → size limit → downstream dispatch. Each stage independently testable.',risk:'Schema evolution breaking existing clients — mitigated by additive-only schema changes (no field removal); field deprecation announced 90 days before removal with compatibility validation in CI.'},
+  plan:{role:'AI Planning Engine',purpose:'The cognitive core. Calls Claude API with the validated request and current system context to generate a directed acyclic graph (DAG) of execution steps. Determines which agents to invoke, in what sequence, and with what parameters. Caches structurally similar plans in Redis to reduce API calls by 40%.',tech:['Claude claude-opus-4 API','Structured JSON output schemas','DAG serialization (Redis)','Plan similarity cache'],sla:[{val:'<200ms',lbl:'Plan P50 (cached)'},{val:'<2s',lbl:'Plan P99 (new)'}],pattern:'ReAct (Reasoning + Acting): Claude reasons about intent → generates tool-use plan → validates plan feasibility → stores in Redis. Temperature=0 for deterministic planning outputs.',risk:'Claude API timeout on complex multi-step requests — mitigated by 30s timeout with simplified fallback plan; circuit breaker prevents cascade when Claude API is degraded.'},
+  decide:{role:'Execution Strategist',purpose:'Maps each DAG node to concrete tools, selects optimal ML model versions from MLflow registry, and tunes inference parameters (batch size, confidence threshold, feature freshness TTL). Acts as the bridge between the abstract plan and concrete tool invocations. Makes ~50 micro-decisions per complex request.',tech:['Decision tree + heuristic scoring','MLflow model metadata API','Feature flag service','Strategy pattern (pluggable selectors)'],sla:[{val:'<50ms',lbl:'Decision latency P99'},{val:'100%',lbl:'Deterministic (no randomness)'}],pattern:'Strategy pattern: each decision type (tool selection, model selection, parameter tuning) is an independently swappable strategy. Enables A/B testing of decision algorithms without code changes.',risk:'Stale model metadata causing wrong version selection — mitigated by 60s TTL on MLflow metadata cache; version pinning available for critical workflows via config override.'},
+  disp:{role:'Task Dispatcher',purpose:'Routes planned tasks to agent worker pools with priority-based scheduling. Implements weighted round-robin across agent replicas for load balancing. Tracks in-flight task counts per agent to prevent overload. Maintains a dead-letter queue for tasks that fail all retry attempts.',tech:['Redis Streams','K8s Job API','Priority queue (custom)','Work-stealing algorithm'],sla:[{val:'<20ms',lbl:'Routing latency P99'},{val:'10K',lbl:'Tasks/second dispatch rate'}],pattern:'Work-stealing queue: idle agents pull from the tail of busy agents\' queues, eliminating starvation. Priority lanes (P0/P1/P2) ensure SLA-critical requests always skip the queue.',risk:'Thundering herd when agents restart simultaneously — mitigated by staggered restart windows and exponential backoff with jitter for agent reconnection.'},
+  montr:{role:'Workflow Observer',purpose:'Tracks every task state transition (queued → assigned → running → complete/failed). Measures per-agent latency percentiles in real-time, triggers SLA breach alerts via PagerDuty, and feeds structured feedback back to the planning loop. The basis for the adaptive optimization feedback cycle.',tech:['Prometheus metrics + PromQL','Structured logging (ECS format)','Kafka (event emission)','Grafana dashboards'],sla:[{val:'<100ms',lbl:'Status update staleness'},{val:'15s',lbl:'Metric scrape interval'}],pattern:'Event sourcing for workflow state: every state transition emitted as immutable event. Read models rebuilt from event log for query efficiency. CQRS separates write-path (state transitions) from read-path (dashboard queries).',risk:'Monitor becoming a bottleneck under high task volume — mitigated by stateless, horizontally scaled design; each instance independently processes its assigned workflow partition.'},
+  ag1:{role:'Data Analyst Agent',purpose:'Specialist agent that translates natural language data questions into precise SQL queries. Executes against Databricks SQL, interprets result sets, and generates human-readable insights. Limited to 5 tool calls per turn to prevent runaway loops. Results fed to the Coordinator for synthesis.',tech:['Claude claude-opus-4 (tool use)','SQLAlchemy + Databricks connector','Result interpretation prompt chain','Max 5 tool calls per turn'],sla:[{val:'<5s',lbl:'Standard query P99'},{val:'<30s',lbl:'Complex analytical query'}],pattern:'ReAct agent with SQL tool-use loop: Claude generates SQL → executes → observes result → decides if more data needed → repeats up to 5 times. Automatic query optimization hints applied.',risk:'Long-running SQL query blocking agent — mitigated by 30s query timeout with async fallback to pre-computed approximations; query cost estimation before execution.'},
+  ag2:{role:'ML Engineer Agent',purpose:'Handles all model inference and explainability tasks. Loads the correct model version from MLflow registry, runs batch or real-time scoring, computes SHAP values for regulatory explainability requirements, and validates prediction quality against confidence thresholds.',tech:['Claude claude-opus-4 (tool use)','MLflow Python client','SHAP library','Databricks Model Serving API'],sla:[{val:'<200ms',lbl:'Single inference P99'},{val:'<5s',lbl:'Batch of 100 predictions'}],pattern:'Circuit breaker wrapping model serving: if prediction endpoint latency exceeds 500ms, circuit opens and agent falls back to simpler scoring heuristic. Prevents cascade from slow model to slow response.',risk:'Model version drift causing inconsistent results between agents — mitigated by experiment-scoped model pinning; all agents in the same workflow use identical model version.'},
+  ag3:{role:'Decision Maker Agent',purpose:'Applies configurable business rules to model outputs — inventory availability, margin floors, compliance constraints, geographic restrictions. Translates approved decisions into concrete executable actions. Writes immutable decision records to the audit log for regulatory compliance.',tech:['OPA policy engine (Rego rules)','Claude claude-opus-4 (complex reasoning)','Audit log writer (Kafka)','Reversible action patterns'],sla:[{val:'<100ms',lbl:'Rules evaluation P99'},{val:'<500ms',lbl:'End-to-end decision time'}],pattern:'Policy-as-code: business rules version-controlled in Git, peer-reviewed, tested with rule unit tests before deployment. Claude handles edge cases that rule engine cannot express.',risk:'Rule conflicts producing contradictory decisions — mitigated by OPA conflict detection in CI pipeline; conflicting rules fail build before deployment. Human escalation queue for cases with no valid rule match.'},
+  coord:{role:'Synthesis Coordinator',purpose:'Aggregates outputs from all specialist agents, detects and resolves inconsistencies, and synthesizes a coherent final response. Acts as the quality control layer before results enter the response pipeline. Uses Claude to reason about conflicting agent outputs rather than applying rigid merge logic.',tech:['Claude claude-opus-4 (synthesis)','Vector similarity deduplication','Confidence-weighted merging','Structured output validation'],sla:[{val:'<500ms',lbl:'Synthesis latency P99'},{val:'>98%',lbl:'Response coherence rate'}],pattern:'Aggregator pattern with semantic deduplication: coordinator identifies overlapping claims across agents, resolves via confidence scoring, and produces attributed final response with source citations.',risk:'Coordinator hallucinating synthesis — mitigated by grounding requirement: coordinator must cite specific agent outputs in synthesis; validation checks that all key claims are attributable.'},
+  tsql:{role:'SQL Query Tool',purpose:'Safe, injection-proof SQL interface to Databricks Delta Lake. Provides parameterized query templates for common patterns, result pagination for large datasets, and result caching in Redis for repeated identical queries. The only channel through which agents access production data.',tech:['Databricks SQL Connector (Python)','Parameterized queries only','Redis result cache (TTL 5min)','Connection pooling (max 20)'],sla:[{val:'<100ms',lbl:'Cached query P99'},{val:'<5s',lbl:'Cold query P99'}],pattern:'Repository pattern abstracting raw SQL: agents request data by semantic operation name (e.g., "get_user_features"), never by raw SQL. Prevents agents from issuing destructive or expensive queries.',risk:'SQL injection from agent-generated queries — architecturally prevented by parameterized-only interface; agents cannot construct raw SQL strings, only select from approved query templates.'},
+  tfeat:{role:'Feature Retrieval Tool',purpose:'Online feature serving interface to the Databricks Feature Store. Fetches pre-computed feature vectors for entity scoring — user attributes, product embeddings, session signals. Handles Redis cache hit/miss automatically with transparent fallback to Feature Store. Ensures point-in-time correctness for any historical backfill operations.',tech:['Databricks Feature Store Python API','Redis hot cache (TTL calibrated per feature group)','Cache-aside pattern','Async prefetch for predicted lookups'],sla:[{val:'<10ms',lbl:'Cache hit P99'},{val:'<50ms',lbl:'Cache miss P99 (store lookup)'}],pattern:'Cache-aside with calibrated TTL: high-volatility features (session: 30s TTL), medium-volatility (user preferences: 5min), low-volatility (product attributes: 1h). Monitoring alerts on cache miss rate spike.',risk:'Feature staleness causing prediction drift — mitigated by per-feature-group freshness monitoring; automated TTL reduction when upstream feature pipeline detects delay.'},
+  tpred:{role:'Prediction Interface Tool',purpose:'Unified ML inference abstraction routing scoring requests to appropriate model endpoints. Handles Databricks Model Serving for production models and direct LightGBM inference for ultra-low-latency paths. Normalizes response schemas across model types so downstream agents receive consistent prediction objects.',tech:['Databricks Model Serving REST API','Circuit breaker (tenacity)','Response schema normalization','Confidence calibration layer'],sla:[{val:'<200ms',lbl:'Model serving P99'},{val:'<20ms',lbl:'Direct inference P99 (LightGBM)'}],pattern:'Facade pattern: single interface regardless of whether model runs on Databricks, local process, or external API. Circuit breaker with 30s half-open window prevents retry storm during model endpoint recovery.',risk:'Model cold start causing first-request latency spike — mitigated by minimum 1 warm model server always running; predictive pre-warming scheduled before known traffic peaks.'},
+  tclaude:{role:'AI Reasoning Tool',purpose:'Exposes Claude\'s reasoning capabilities as a discrete tool that agents can invoke for tasks requiring unstructured intelligence: text analysis, code generation, complex multi-step reasoning, and natural language explanation. Sandboxes user content to prevent prompt injection from reaching the orchestrator context.',tech:['Claude claude-opus-4 API','Streaming SSE responses','User content sandboxing','Token budget enforcement (max 4096/call)'],sla:[{val:'<2s',lbl:'Standard analysis P99'},{val:'<10s',lbl:'Complex code generation P99'}],pattern:'Tool invocation with sandboxed context: user-provided content wrapped in explicit boundary markers. Claude instructed to treat content between markers as untrusted data, never as instructions.',risk:'Prompt injection via user content crafted to hijack Claude\'s behavior — mitigated by explicit sandboxing, instruction hierarchy (system > tool > user), and output validation against expected schema.'},
+  trec:{role:'Recommendation Engine Tool',purpose:'Implements multi-arm bandit (Thompson Sampling) for online learning recommendation with automatic explore/exploit balance. Applies business constraint filters post-scoring: inventory availability, margin floor ($5 minimum), geographic eligibility, and active promotion exclusions.',tech:['Thompson Sampling (custom Python)','Business rule post-filter','PostgreSQL constraint store','MMR diversity injection'],sla:[{val:'<50ms',lbl:'Top-10 recommendations P99'},{val:'>30%',lbl:'Diversity ratio (MMR)'}],pattern:'Explore/exploit via Thompson Sampling: each arm (product) maintains Beta distribution; sample to select arms balancing exploration of uncertain items with exploitation of known good performers.',risk:'Popularity bias creating filter bubble with same top items — mitigated by Maximal Marginal Relevance injecting 30% diversity; long-tail promotion for items with insufficient exploration data.'},
+  dbsql:{role:'SQL Analytics Engine',purpose:'Databricks SQL Warehouse (serverless Photon engine) powers all structured query workloads. Row-level security filters results to tenant scope automatically. Result cache delivers <100ms for repeated dashboard queries. The primary interface for operational reporting and ad-hoc analytics.',tech:['Databricks SQL Serverless','Photon query engine','Row-level security','Result cache (24h TTL)'],sla:[{val:'<2s',lbl:'Interactive query P50'},{val:'Serverless',lbl:'0-to-50 cluster auto-scale'}],pattern:'Consumption-based serverless: zero cost when idle, instant scale-out for bursts. ANSI SQL with Delta Lake extensions (MERGE, TIME TRAVEL). Separate warehouses for production vs BI to prevent interference.',risk:'BI query saturating warehouse and impacting production scoring — mitigated by dedicated warehouses per workload; query timeout (300s) prevents runaway queries from consuming all resources.'},
+  spark:{role:'Distributed Compute',purpose:'Apache Spark 3.5 on Databricks ML Runtime handles large-scale data transformations, feature engineering pipelines, and model training workloads. Photon-native execution provides 10x speed improvement over OSS Spark for aggregations. Z-order clustering pre-organizes data for query pattern optimization.',tech:['Apache Spark 3.5','Databricks ML Runtime 14','Delta Lake 3.x ACID','Photon columnar execution'],sla:[{val:'<30min',lbl:'Nightly ETL (30TB)'},{val:'64 CPUs',lbl:'Max auto-scale worker pool'}],pattern:'Lambda architecture: Spark batch layer for accurate historical aggregates (Gold tables); Kafka Streams speed layer for near-real-time approximations. Batch corrects speed layer data quality issues.',risk:'Skewed data distribution causing executor OOM on join operations — mitigated by Adaptive Query Execution (AQE) auto-tuning; salted joins for known skewed keys (user_id hot users).'},
+  fstore:{role:'Feature Store (Online + Offline)',purpose:'Databricks Feature Store eliminates training-serving skew — the #1 cause of production ML failures — by sharing identical feature computation code for both model training and production inference. Online serving via DynamoDB delivers <10ms P99. Offline storage in Delta Lake enables point-in-time correct training joins.',tech:['Databricks Feature Store','DynamoDB (online serving)','Delta Lake (offline training)','Point-in-time joins'],sla:[{val:'<10ms',lbl:'Online serving P99'},{val:'<5min',lbl:'Feature freshness SLA'}],pattern:'Single feature definition for both training and serving: no separate ETL pipelines. Feature groups versioned with semantic versioning; backward compatible changes only — prevents breaking model contracts.',risk:'Feature staleness during upstream pipeline delay — mitigated by freshness monitoring dashboard; automatic feature store refresh triggered by data pipeline SLA alerts; model confidence degrades gracefully on stale features.'},
+  mlreg:{role:'Model Lifecycle Registry',purpose:'MLflow tracks all experiments and manages model lifecycle: development → staging → canary (5% traffic) → production → archived. Stores model artifacts, training data lineage, and auto-generated model cards with fairness assessments. Required for financial services SR 11-7 model risk management compliance.',tech:['MLflow 2.x','Delta Lake artifact storage','Automated model cards','Champion/Challenger framework'],sla:[{val:'0-downtime',lbl:'Model promotion strategy'},{val:'Auto-rollback',lbl:'On >5% accuracy degradation'}],pattern:'GitOps model promotion: model PR triggers shadow scoring against held-out test → statistical significance at 95% → canary 5% traffic → full promotion. Automated rollback if metric degradation detected within 1h.',risk:'Model performance silent degradation after production distribution shift — mitigated by Evidently AI drift monitoring (PSI > 0.2 triggers retraining); weekly holdout validation against recent ground truth.'},
+  cache:{role:'Hot Data Cache',purpose:'Redis 7 Cluster serves as the low-latency data access layer: ML features (<1ms), session state, rate limit counters, and in-flight workflow state. LRU eviction automatically removes cold features under memory pressure. AOF persistence prevents data loss on Redis restart.',tech:['Redis 7.x Cluster (3-node)','LRU eviction policy','TLS in-transit encryption','RDB snapshots + AOF persistence'],sla:[{val:'<1ms',lbl:'Read P99'},{val:'99.99%',lbl:'Multi-AZ availability'}],pattern:'Cache-aside with write-through for critical paths. TTL varies by data category: rate limits (60s), session (24h), ML features (5min), workflow state (24h). Atomic Lua scripts for compare-and-swap operations.',risk:'Cache stampede on cold start or mass expiry — mitigated by probabilistic early expiry (PER algorithm): cache entries are proactively refreshed with probability proportional to proximity to expiry.'},
+  queue:{role:'Async Result Bus',purpose:'Kafka result queue decouples computation completion from response delivery. Enables streaming partial results to clients before full workflow completes. Provides durable 7-day retention for audit and replay. Consumer groups allow independent scaling of result processors for different downstream consumers.',tech:['Apache Kafka (Confluent Cloud)','Compacted topics (latest state)','Kafka Streams (aggregation)','Schema Registry (Avro)'],sla:[{val:'<10ms',lbl:'Result publish latency'},{val:'At-least-once',lbl:'Delivery guarantee'}],pattern:'Event sourcing for result history: all intermediate and final results persisted. Consumer replay from offset-0 enables full workflow reconstruction for debugging and audit. Compacted topics maintain latest state per workflow ID.',risk:'Consumer lag accumulation under traffic spikes — mitigated by KEDA-based auto-scaling triggered when consumer lag exceeds 10K messages; priority consumer groups for time-sensitive result delivery.'},
+  state:{role:'Distributed State Store',purpose:'Redis Cluster maintains execution state for long-running agentic workflows: current plan node, completed steps, intermediate results, and checkpoint data. Enables workflow resumability after agent failures. Atomic operations via Lua scripts prevent partial updates. State inspectable by monitoring tools for debugging.',tech:['Redis Cluster with Lua atomics','AOF + RDB persistence','Version vectors (optimistic locking)','Distributed locks (Redlock)'],sla:[{val:'<5ms',lbl:'State read/write P99'},{val:'0 data loss',lbl:'On single node failure'}],pattern:'Saga pattern for distributed workflow coordination: each step appends to immutable event log; state reconstructible from log. Saga rollback via compensating events on failure — no two-phase commit required.',risk:'Split-brain on network partition corrupting workflow state — mitigated by Redlock distributed lock algorithm across 3 Redis nodes; requires quorum (2/3) for lock acquisition preventing split-brain writes.'},
+  fmt:{role:'Response Formatter',purpose:'Normalizes heterogeneous agent outputs into consistent, schema-validated response envelopes. Handles format variants: JSON API responses, HTML fragments for web rendering, Markdown for chat interfaces, and Plotly chart specs for visualization-heavy responses. Versioned output schemas prevent breaking client changes.',tech:['Jinja2 templating','Pydantic output models','Plotly (chart specs)','OpenAPI response schema validation'],sla:[{val:'<50ms',lbl:'Formatting overhead P99'},{val:'100%',lbl:'Schema-validated outputs'}],pattern:'Template method pattern: base response envelope with pluggable format-specific renderers. Response schema versioning with backward-compatible additive changes only; deprecation warnings injected when client uses old schema version.',risk:'Schema drift breaking client integrations — mitigated by consumer-driven contract testing (Pact); provider team notified before any breaking change; 90-day deprecation window with migration guides.'},
+  store:{role:'Result Persistence',purpose:'Every request/response pair persisted to both PostgreSQL (structured metadata, searchable) and Delta Lake (full payload, long-term analytics). Non-blocking async write path ensures persistence never adds to response latency. Full-text search via pg_trgm enables debugging by content. Basis for ground-truth model evaluation datasets.',tech:['PostgreSQL 15 (metadata)','Delta Lake (full payloads)','Async write (non-blocking)','pg_trgm (full-text search)'],sla:[{val:'Async',lbl:'Write mode (non-blocking)'},{val:'90 days',lbl:'Hot storage retention'}],pattern:'Write-behind buffering: responses written to Kafka first (low latency), then consumed by persistence workers (decoupled). Hot/cold storage tiering: PostgreSQL for 90-day hot tier, Delta Lake archive for compliance retention.',risk:'Storage growth overwhelming PostgreSQL — mitigated by pg_partman monthly partitioning; automated archival to Delta Lake after 90 days; cold storage 10x cheaper per GB than PostgreSQL.'},
+  dlvr:{role:'Response Delivery',purpose:'Final-mile delivery of formatted responses to requesting clients. Protocol-multiplexing handles REST (synchronous), WebSocket (streaming), and gRPC (bidirectional) simultaneously. Streaming responses begin before full processing completes, reducing perceived latency by delivering content progressively.',tech:['FastAPI async handlers','WebSocket multiplexer','gRPC server streaming','Circuit breaker (client failures)'],sla:[{val:'<10ms',lbl:'Protocol switching overhead'},{val:'Progressive',lbl:'Streaming for long workflows'}],pattern:'Async streaming with progressive disclosure: clients receive status updates every 500ms during long workflows. Final response delivered as streaming chunks. Circuit breaker handles unresponsive clients without blocking worker threads.',risk:'Client timeout during long AI workflow — mitigated by streaming partial results with progress percentage; clients can reconnect and receive full result from Result Queue within 24h retention window.'},
+};
+
+let _sel=null, eg, ng, dg;
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('diagram');
+
+function mk(t,a={}){const e=document.createElementNS(NS,t);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+
+function init(){
+  const defs=svg.querySelector('defs');
+  for(const n of NODES){
+    const g=mk('linearGradient',{id:'grad-'+n.id,x1:'0%',y1:'0%',x2:'100%',y2:'100%'});
+    [[0,n.grad[0]],[100,n.grad[1]]].forEach(([o,c])=>{const s=mk('stop',{offset:o+'%','stop-color':c});g.appendChild(s);});
+    defs.appendChild(g);
+  }
+  for(const s of SECTIONS)drawStrip(s);
+  eg=mk('g');ng=mk('g');dg=mk('g');
+  svg.appendChild(eg);svg.appendChild(ng);svg.appendChild(dg);
+  EDGES.forEach(e=>drawEdge(e));
+  NODES.forEach(n=>drawNode(n));
+  EDGES.forEach(e=>addDots(e));
+  svg.addEventListener('click',()=>clearSel());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel();});
+  buildNavPane();
+  document.getElementById('np-search').addEventListener('input',filterNav);
+}
+
+function drawStrip(s){
+  const g=mk('g');
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:20,fill:s.strip}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
+  const t=mk('text',{x:14,y:s.rowStart+14,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.09em'});
+  t.textContent=s.label;g.appendChild(t);
+  g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
+  svg.insertBefore(g,svg.firstChild);
+}
+
+function gn(id){return NODES.find(n=>n.id===id);}
+function ap(n1,n2){const x1=n1.x,y1=n1.y+28,x2=n2.x,y2=n2.y-28,my=(y1+y2)/2;if(Math.abs(x1-x2)<5)return`M ${x1},${y1} L ${x2},${y2}`;return`M ${x1},${y1} C ${x1},${my} ${x2},${my} ${x2},${y2}`;}
+
+function drawEdge(e){
+  const d=e.path||ap(gn(e.from),gn(e.to));e._d=d;
+  const p=mk('path',{d,stroke:e.color,'stroke-width':e.dashed?'1.5':'1.8',fill:'none',opacity:'0.42','marker-end':'url(#arrowhead)'});
+  if(e.dashed)p.setAttribute('stroke-dasharray','6,4');
+  p.setAttribute('data-from',e.from);p.setAttribute('data-to',e.to);
+  p.style.transition='opacity .25s';
+  eg.appendChild(p);
+}
+
+function drawNode(n){
+  const W=n.w||165,H=n.h||54,g=mk('g');
+  g.setAttribute('data-node-id',n.id);
+  g.style.cursor='pointer';g.style.transition='opacity .25s';
+  // [0] Hit area
+  g.appendChild(mk('rect',{x:n.x-W/2-10,y:n.y-H/2-10,width:W+20,height:H+20,rx:17,fill:'transparent'}));
+  // [1] Selection ring
+  g.appendChild(mk('rect',{x:n.x-W/2-7,y:n.y-H/2-7,width:W+14,height:H+14,rx:16,fill:'none',stroke:n.stroke,'stroke-width':'2.5',opacity:'0'}));
+  // [2] Glow halo
+  g.appendChild(mk('rect',{x:n.x-W/2-4,y:n.y-H/2-4,width:W+8,height:H+8,rx:15,fill:'none',stroke:n.stroke,'stroke-width':'2',opacity:'0.15',filter:'url(#nglow)'}));
+  // [3] Body
+  g.appendChild(mk('rect',{x:n.x-W/2,y:n.y-H/2,width:W,height:H,rx:11,fill:`url(#grad-${n.id})`,stroke:n.stroke,'stroke-width':'1.6',filter:'url(#shadow)'}));
+  const lb=mk('text',{x:n.x,y:n.y-(n.sub?7:5),'text-anchor':'middle',fill:'#FFFFFF','font-size':n.fs||'12.5','font-weight':'700','font-family':'system-ui,sans-serif'});
+  lb.textContent=n.label;g.appendChild(lb);
+  if(n.sub){const sb=mk('text',{x:n.x,y:n.y+10,'text-anchor':'middle',fill:'rgba(255,255,255,.58)','font-size':'9','font-family':'system-ui,sans-serif'});sb.textContent=n.sub;g.appendChild(sb);}
+  g.addEventListener('click',e=>{e.stopPropagation();selectNode(n.id);});
+  ng.appendChild(g);
+}
+
+function addDots(e){
+  const d=e._d,cnt=e.dots||2;
+  for(let i=0;i<cnt;i++){
+    const og=mk('circle',{r:'8',fill:e.color,opacity:'0.18',filter:'url(#glow)'});
+    og.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(og);
+    const c=mk('circle',{r:'4',fill:e.color,opacity:'0.95',filter:'url(#glow)'});
+    c.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(c);
+  }
+}
+
+function selectNode(id){
+  if(_sel===id){clearSel();return;}
+  _sel=id;
+  dg.style.opacity='0.18';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{
+    const nid=g.getAttribute('data-node-id');
+    const isSel=nid===id;
+    const isConn=EDGES.some(e=>(e.from===id&&e.to===nid)||(e.to===id&&e.from===nid));
+    g.style.opacity=isSel?'1':(isConn?'0.85':'0.12');
+    const sr=g.children[1];
+    sr.setAttribute('opacity',isSel?'0.55':'0');
+    if(isSel){const n=NODES.find(n=>n.id===id);if(n)sr.setAttribute('stroke',n.stroke);}
+  });
+  eg.querySelectorAll('[data-from]').forEach(p=>{
+    const isConn=p.getAttribute('data-from')===id||p.getAttribute('data-to')===id;
+    p.style.opacity=isConn?'0.85':'0.04';
+  });
+  showDp(id);
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.toggle('sel',b.getAttribute('data-nav-id')===id));
+  const btn=document.querySelector(`.nnb[data-nav-id="${id}"]`);
+  if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function clearSel(){
+  if(!_sel)return;
+  _sel=null;
+  dg.style.opacity='1';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{g.style.opacity='1';if(g.children[1])g.children[1].setAttribute('opacity','0');});
+  eg.querySelectorAll('[data-from]').forEach(p=>{p.style.opacity='0.42';});
+  closeDp();
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.remove('sel'));
+}
+
+function showDp(id){
+  const n=NODES.find(n=>n.id===id);
+  const d=NODE_DETAILS[id];
+  if(!n||!d)return;
+  document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
+  document.getElementById('dp-role').textContent=d.role;
+  document.getElementById('dp-name').textContent=n.label;
+  document.getElementById('dp-sub').textContent=n.sub||'';
+  const conns=getConns(id);
+  document.getElementById('dp-body').innerHTML=`
+    <div><div class="dp-sl">Purpose & Rationale</div><div class="dp-purpose">${d.purpose}</div></div>
+    <div><div class="dp-sl">Technology Stack</div><div class="dp-chips">${d.tech.map(t=>`<span class="dp-chip">${t}</span>`).join('')}</div></div>
+    <div><div class="dp-sl">Performance SLA</div><div class="dp-grid">${d.sla.map(s=>`<div class="dp-metric"><div class="dp-mv">${s.val}</div><div class="dp-ml">${s.lbl}</div></div>`).join('')}</div></div>
+    <div class="dp-pat"><div class="dp-pat-l">Architectural Pattern</div><div class="dp-pat-v">${d.pattern}</div></div>
+    <div><div class="dp-sl">Connected Components</div><div class="dp-conns">${conns.length?conns.map(c=>`<div class="dp-conn" onclick="event.stopPropagation();selectNode('${c.id}')"><span class="dp-dir ${c.dir}">${c.dir==='in'?'← FROM':'→ TO'}</span><span class="dp-cn">${c.label}</span></div>`).join(''):'<div class="no-conn">No direct connections</div>'}</div></div>
+    <div class="dp-risk"><div class="dp-risk-l">⚠ Risk &amp; Mitigation</div><div class="dp-risk-v">${d.risk}</div></div>`;
+  document.getElementById('dp').classList.add('open');
+}
+
+function getConns(id){
+  const seen=new Set(),r=[];
+  EDGES.forEach(e=>{
+    if(e.from===id){const n=gn(e.to);if(n&&!seen.has('out'+e.to)){seen.add('out'+e.to);r.push({id:e.to,label:n.label,dir:'out'});}}
+    if(e.to===id){const n=gn(e.from);if(n&&!seen.has('in'+e.from)){seen.add('in'+e.from);r.push({id:e.from,label:n.label,dir:'in'});}}
+  });
+  return r;
+}
+
+function closeDp(){document.getElementById('dp').classList.remove('open');}
+function toggleNp(){document.getElementById('np').classList.toggle('open');}
+
+function buildNavPane(){
+  const body=document.getElementById('np-body');
+  SECTIONS.forEach(sec=>{
+    const secNodes=NODES.filter(n=>n.y>=sec.rowStart&&n.y<sec.rowStart+sec.rowH);
+    if(!secNodes.length)return;
+    const wrap=document.createElement('div');
+    const hdr=document.createElement('div');hdr.className='nsh';
+    hdr.innerHTML=`<div class="nsh-bar" style="background:${sec.bar}"></div><span class="nsh-lbl">${sec.label}</span><span class="nsh-chev">▾</span>`;
+    const nodesDiv=document.createElement('div');nodesDiv.className='nsn';
+    hdr.onclick=()=>{hdr.classList.toggle('col');nodesDiv.classList.toggle('hid');};
+    secNodes.forEach(n=>{
+      const d=NODE_DETAILS[n.id]||{};
+      const btn=document.createElement('button');btn.className='nnb';btn.setAttribute('data-nav-id',n.id);
+      btn.innerHTML=`<div class="nn-sw" style="background:linear-gradient(135deg,${n.grad[0]},${n.grad[1]});border-color:${n.stroke}40"></div><div class="nn-info"><div class="nn-name">${n.label}</div><div class="nn-role">${d.role||''}</div></div>`;
+      btn.onclick=()=>selectNode(n.id);
+      nodesDiv.appendChild(btn);
+    });
+    wrap.appendChild(hdr);wrap.appendChild(nodesDiv);body.appendChild(wrap);
+  });
+}
+
+function filterNav(){
+  const q=this.value.toLowerCase();
+  document.querySelectorAll('.nnb').forEach(btn=>{
+    const nm=btn.querySelector('.nn-name').textContent.toLowerCase();
+    const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
+    btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
+  });
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Business Architecture — AI Factory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0C0900;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;overflow:hidden;height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(251,191,36,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.03) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+
+/* ── MAIN NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(12,9,0,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-left{display:flex;align-items:center;gap:12px;min-width:0}
+.back{color:#64748B;text-decoration:none;font-size:12px;white-space:nowrap;transition:color .2s}
+.back:hover{color:#E2E8F0}
+.vdiv{width:1px;height:20px;background:rgba(255,255,255,.1)}
+.nav-role{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#FBBF24;margin-bottom:2px}
+.nav-title{font-size:13px;font-weight:700;color:#F1F5F9;white-space:nowrap}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:600;text-decoration:none;color:#64748B;border:1px solid transparent;transition:all .2s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:#FBBF24;border-color:rgba(251,191,36,.28);background:rgba(251,191,36,.08)}
+
+/* ── LEGEND BAR ── */
+.legend-bar{position:fixed;top:52px;left:0;right:0;z-index:190;display:flex;align-items:center;gap:20px;padding:0 24px;height:30px;background:rgba(12,9,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.05)}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#64748B;white-space:nowrap}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
+.leg-pulse{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:lp 1.5s infinite}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+/* ── MAIN SVG ── */
+svg#diagram{position:fixed;top:116px;left:0;width:100vw;height:calc(100vh - 116px)}
+
+/* ── NAV PANE ── */
+.np{position:fixed;top:116px;left:-248px;width:274px;height:calc(100vh - 116px);z-index:250;background:rgba(8,6,0,.97);border-right:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:left .38s cubic-bezier(.4,0,.2,1)}
+.np.open{left:0}
+.np-tab{position:absolute;top:50%;right:0;transform:translateY(-50%);width:26px;height:96px;cursor:pointer;background:rgba(251,191,36,.07);border-left:2px solid rgba(251,191,36,.2);border-radius:0 10px 10px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:all .2s}
+.np-tab:hover{background:rgba(251,191,36,.13)}
+.np-tab-txt{writing-mode:vertical-lr;text-orientation:mixed;font-size:7.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(251,191,36,.75);transform:rotate(180deg)}
+.np-tab-ico{font-size:12px;color:rgba(251,191,36,.5);transition:transform .35s}
+.np.open .np-tab-ico{transform:rotate(180deg)}
+.np-head{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.np-head-lbl{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:10px}
+.np-search{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:7px 10px 7px 30px;font-size:12px;color:#E2E8F0;outline:none;transition:all .2s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='rgba(255,255,255,.25)' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+.np-search:focus{border-color:rgba(251,191,36,.4);background-color:rgba(251,191,36,.06)}
+.np-search::placeholder{color:rgba(255,255,255,.2)}
+.np-body{flex:1;overflow-y:auto;padding-bottom:20px}
+.np-body::-webkit-scrollbar{width:3px}.np-body::-webkit-scrollbar-track{background:transparent}.np-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.nsh{display:flex;align-items:center;gap:7px;padding:10px 10px 5px;cursor:pointer;user-select:none;transition:background .15s}
+.nsh:hover{background:rgba(255,255,255,.03)}
+.nsh-bar{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.nsh-lbl{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;flex:1;color:rgba(255,255,255,.32)}
+.nsh-chev{font-size:9px;color:rgba(255,255,255,.18);transition:transform .25s}
+.nsh.col .nsh-chev{transform:rotate(-90deg)}
+.nsn{padding:0 5px 4px;display:flex;flex-direction:column;gap:2px}
+.nsn.hid{display:none}
+.nnb{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:transparent;transition:all .15s;text-align:left;width:100%}
+.nnb:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.07)}
+.nnb.sel{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3)}
+.nn-sw{width:28px;height:28px;border-radius:7px;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.nn-info{flex:1;min-width:0}
+.nn-name{font-size:11px;font-weight:700;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nn-role{font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+/* ── DETAIL PANEL ── */
+.dp{position:fixed;top:116px;right:-392px;width:382px;height:calc(100vh - 116px);z-index:250;background:rgba(8,6,0,.97);border-left:1px solid rgba(255,255,255,.07);backdrop-filter:blur(24px);display:flex;flex-direction:column;transition:right .38s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.dp.open{right:0}
+.dp-hero{flex-shrink:0;height:104px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;overflow:hidden}
+.dp-hero-bg{position:absolute;inset:0}
+.dp-hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.3) 100%)}
+.dp-hero-txt{position:relative;z-index:1;min-width:0}
+.dp-hero-role{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}
+.dp-hero-name{font-size:18px;font-weight:900;color:#fff;line-height:1.05}
+.dp-hero-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:5px}
+.dp-close{position:absolute;top:10px;right:10px;z-index:2;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#94A3B8;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dp-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.dp-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.dp-body::-webkit-scrollbar{width:3px}.dp-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.dp-sl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:7px}
+.dp-purpose{font-size:12px;line-height:1.72;color:rgba(255,255,255,.68)}
+.dp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.dp-chip{padding:3px 9px;border-radius:100px;font-size:10.5px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.62)}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.dp-metric{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px}
+.dp-mv{font-size:17px;font-weight:900;color:#fff;line-height:1}
+.dp-ml{font-size:9px;color:rgba(255,255,255,.36);margin-top:3px}
+.dp-pat{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.18);border-radius:10px;padding:11px 13px}
+.dp-pat-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(251,191,36,.55);margin-bottom:5px}
+.dp-pat-v{font-size:12px;font-weight:700;color:rgba(253,230,138,.9);line-height:1.5}
+.dp-conns{display:flex;flex-direction:column;gap:5px}
+.dp-conn{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .15s}
+.dp-conn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.13)}
+.dp-dir{font-size:7.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 6px;border-radius:100px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.dp-dir.in{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.25);color:#38BDF8}
+.dp-dir.out{background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.25);color:#FB923C}
+.dp-cn{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.72)}
+.dp-risk{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.16);border-radius:10px;padding:11px 13px}
+.dp-risk-l{font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgba(248,113,113,.55);margin-bottom:5px}
+.dp-risk-v{font-size:11.5px;line-height:1.65;color:rgba(255,255,255,.6)}
+.no-conn{font-size:11px;color:rgba(255,255,255,.25);padding:6px 4px}
+.brief-bar{position:fixed;top:82px;left:0;right:0;z-index:185;height:34px;display:flex;align-items:center;padding:0 28px;gap:10px;background:rgba(255,255,255,.022);border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;color:rgba(255,255,255,.42);font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden}
+.brief-bar strong{color:rgba(255,255,255,.7);font-weight:600}
+.brief-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;opacity:.75}
+</style>
+</head>
+<body>
+
+<!-- MAIN NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="back">← Back</a>
+    <div class="vdiv"></div>
+    <div>
+      <div class="nav-role">Chief Business Architect</div>
+      <div class="nav-title">Business Architecture — AI Factory</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a href="01-technical.html"   class="nav-link">⚙ Technical</a>
+      <a href="02-application.html" class="nav-link">🔗 Application</a>
+      <a href="03-data.html"        class="nav-link">🗄 Data</a>
+      <a href="04-business.html"    class="nav-link active">📈 Business</a>
+    </div>
+  </div>
+</nav>
+
+<!-- LEGEND BAR -->
+<div class="legend-bar">
+  <div class="leg-item"><div class="leg-dot" style="background:#3B82F6"></div>Business Channels</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FBBF24"></div>Value Stream</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#FB923C"></div>Capabilities</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#C084FC"></div>AI Engine</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#4ADE80"></div>Data Platform</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#38BDF8"></div>KPIs</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#2DD4BF"></div>Outcomes</div>
+  <div class="leg-sep"></div>
+  <div class="leg-item" style="color:#FBBF24"><div class="leg-pulse" style="background:#FBBF24"></div>Live data flow</div>
+</div>
+
+<!-- BRIEF -->
+<div class="brief-bar">
+  <div class="brief-dot" style="background:#FBBF24"></div>
+  Five AI-powered capabilities — customer intelligence, product analytics, risk management, and ops optimization — mapped to live KPIs and measured business outcomes. <strong>What this platform delivers to the business.</strong>
+</div>
+
+<!-- NAV PANE -->
+<div class="np" id="np">
+  <div class="np-tab" onclick="toggleNp()">
+    <span class="np-tab-txt">Navigator</span>
+    <span class="np-tab-ico">◀</span>
+  </div>
+  <div class="np-head">
+    <div class="np-head-lbl">Business Capability Navigator</div>
+    <input class="np-search" id="np-search" placeholder="Search components…" autocomplete="off">
+  </div>
+  <div class="np-body" id="np-body"></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="dp" id="dp">
+  <div class="dp-hero" id="dp-hero">
+    <div class="dp-hero-bg" id="dp-hero-bg"></div>
+    <div class="dp-hero-ov"></div>
+    <div class="dp-hero-txt">
+      <div class="dp-hero-role" id="dp-role"></div>
+      <div class="dp-hero-name" id="dp-name"></div>
+      <div class="dp-hero-sub"  id="dp-sub"></div>
+    </div>
+    <button class="dp-close" onclick="closeDp()">✕</button>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<svg id="diagram" viewBox="0 0 1500 830" preserveAspectRatio="xMidYMid meet">
+<defs>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="nglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="9"/>
+  </filter>
+  <filter id="shadow">
+    <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+  </filter>
+  <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M 0,1 L 9,5 L 0,9 Z" fill="rgba(255,255,255,0.5)"/>
+  </marker>
+</defs>
+</svg>
+
+<script>
+const SECTIONS = [
+  {label:'BUSINESS CHANNELS & STAKEHOLDERS',  rowStart:50,  rowH:122, strip:'rgba(59,130,246,.14)',  bar:'#3B82F6', lc:'rgba(147,197,253,.95)'},
+  {label:'VALUE STREAM — REQUEST TO OUTCOME', rowStart:172, rowH:122, strip:'rgba(251,191,36,.16)',  bar:'#FBBF24', lc:'rgba(253,224,71,.98)'},
+  {label:'BUSINESS CAPABILITIES',             rowStart:294, rowH:122, strip:'rgba(249,115,22,.13)',  bar:'#F97316', lc:'rgba(253,186,116,.95)'},
+  {label:'AI ENGINE — INTELLIGENCE LAYER',    rowStart:416, rowH:122, strip:'rgba(124,58,237,.13)',  bar:'#7C3AED', lc:'rgba(196,181,253,.95)'},
+  {label:'DATA PLATFORM',                     rowStart:538, rowH:116, strip:'rgba(22,163,74,.13)',   bar:'#16A34A', lc:'rgba(134,239,172,.95)'},
+  {label:'PERFORMANCE KPIs',                  rowStart:654, rowH:112, strip:'rgba(14,165,233,.13)',  bar:'#0EA5E9', lc:'rgba(125,211,252,.95)'},
+  {label:'BUSINESS OUTCOMES & ROI',           rowStart:766, rowH:64,  strip:'rgba(13,148,136,.14)',  bar:'#0D9488', lc:'rgba(153,246,228,.98)'},
+];
+
+const NODES = [
+  // CHANNELS
+  {id:'web_ch',  label:'Web / Mobile',      sub:'Customer-facing · React · PWA',  x:190,  y:84,  grad:['#1E3A8A','#2563EB'], stroke:'#60A5FA'},
+  {id:'api_ch',  label:'Partner APIs',      sub:'B2B · Integration · Webhooks',   x:470,  y:84,  grad:['#1E3A8A','#1D4ED8'], stroke:'#93C5FD'},
+  {id:'int_ch',  label:'Internal Systems',  sub:'ERP · CRM · BI · Data Feeds',    x:750,  y:84,  grad:['#1E3A8A','#1E40AF'], stroke:'#60A5FA'},
+  {id:'ops_ch',  label:'Ops Automation',    sub:'Batch Jobs · Scheduled Tasks',   x:1030, y:84,  grad:['#1E293B','#334155'], stroke:'#94A3B8'},
+  {id:'exec_ch', label:'Executive BI',      sub:'Dashboards · Reports · Alerts',  x:1310, y:84,  grad:['#500724','#9D174D'], stroke:'#F472B6'},
+  // VALUE STREAM
+  {id:'vs1',     label:'Customer Request',  sub:'Any channel · Any format',       x:160,  y:206, grad:['#451A03','#92400E'], stroke:'#FBBF24', w:172},
+  {id:'vs2',     label:'AI Intelligence',   sub:'Claude reasons · Plans · Decides',x:450,  y:206, grad:['#451A03','#B45309'], stroke:'#F59E0B', w:172},
+  {id:'vs3',     label:'Smart Decision',    sub:'Multi-agent · Tool-augmented',   x:740,  y:206, grad:['#713F12','#D97706'], stroke:'#FBBF24', w:172},
+  {id:'vs4',     label:'Automated Action',  sub:'Execute · Notify · Record',      x:1030, y:206, grad:['#713F12','#B45309'], stroke:'#FCD34D', w:172},
+  {id:'vs5',     label:'Business Outcome',  sub:'Value delivered · Measured',     x:1320, y:206, grad:['#134E4A','#0F766E'], stroke:'#2DD4BF', w:172},
+  // CAPABILITIES
+  {id:'cap_ci',  label:'Customer Intelligence', sub:'Recommendations · Personalization · LTV', x:200, y:328, grad:['#431407','#9A3412'], stroke:'#FB923C', w:190},
+  {id:'cap_pa',  label:'Product Analytics', sub:'Trend Analysis · A/B · Forecasting',          x:530, y:328, grad:['#451A03','#B45309'], stroke:'#FCD34D', w:185},
+  {id:'cap_rm',  label:'Risk Management',   sub:'Fraud Detection · Compliance · Alerts',       x:860, y:328, grad:['#450A0A','#991B1B'], stroke:'#FCA5A5', w:185},
+  {id:'cap_oo',  label:'Ops Optimization',  sub:'Batch Jobs · Reporting · Scheduling',          x:1190,y:328, grad:['#14532D','#166534'], stroke:'#4ADE80', w:185},
+  // AI ENGINE
+  {id:'claude',  label:'Claude Orchestrator',sub:'LLM · Planning · Tool Use · DAG',x:200,  y:450, grad:['#3B0764','#6D28D9'], stroke:'#C084FC', w:185},
+  {id:'agents',  label:'Multi-Agent System', sub:'Data Analyst · ML Eng · Decision',x:530, y:450, grad:['#3B0764','#7E22CE'], stroke:'#A78BFA', w:185},
+  {id:'predict', label:'Prediction Engine',  sub:'LightGBM · XGBoost · SHAP',     x:860,  y:450, grad:['#4C1D95','#6D28D9'], stroke:'#C084FC', w:180},
+  {id:'rag',     label:'Search / RAG',       sub:'Vector DB · Semantic · FAISS',   x:1190, y:450, grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8', w:175},
+  // DATA PLATFORM
+  {id:'delta',   label:'Delta Lake',         sub:'30 TB · ACID · Bronze/Silver/Gold',x:200, y:572, grad:['#14532D','#15803D'], stroke:'#4ADE80', w:178},
+  {id:'fstore',  label:'Feature Store',      sub:'Online · Offline · Point-in-time',x:530,  y:572, grad:['#065F46','#059669'], stroke:'#34D399', w:172},
+  {id:'mlflow',  label:'MLflow Registry',    sub:'Production Models · Experiment Track',x:860,y:572,grad:['#065F46','#047857'],stroke:'#34D399',w:182},
+  {id:'kafka',   label:'Kafka Streaming',    sub:'Real-time Events · 100K msg/s',  x:1190, y:572, grad:['#451A03','#B45309'], stroke:'#FCD34D', w:175},
+  // KPIs
+  {id:'kpi1',    label:'< 500ms P99',        sub:'API Response Latency',           x:175,  y:688, grad:['#0C4A6E','#0369A1'], stroke:'#38BDF8', w:155, h:62},
+  {id:'kpi2',    label:'5,000 req/s',         sub:'Peak Throughput',                x:395,  y:688, grad:['#065F46','#059669'], stroke:'#34D399', w:155, h:62},
+  {id:'kpi3',    label:'99.9% Uptime',       sub:'Multi-AZ SLA',                  x:615,  y:688, grad:['#14532D','#166534'], stroke:'#4ADE80', w:155, h:62},
+  {id:'kpi4',    label:'~$5K / mo',          sub:'Production Infra Cost',          x:835,  y:688, grad:['#713F12','#A16207'], stroke:'#FACC15', w:155, h:62},
+  {id:'kpi5',    label:'3–20 Pods',          sub:'Auto-scale Range',               x:1055, y:688, grad:['#3B0764','#6D28D9'], stroke:'#C084FC', w:155, h:62},
+  {id:'kpi6',    label:'< 1 min RPO',        sub:'Disaster Recovery',              x:1275, y:688, grad:['#450A0A','#991B1B'], stroke:'#FCA5A5', w:155, h:62},
+  // OUTCOMES
+  {id:'out1',    label:'Revenue Growth',     sub:'Rec Engine · +12% CTR proven',  x:210,  y:792, grad:['#134E4A','#0D9488'], stroke:'#2DD4BF', w:185},
+  {id:'out2',    label:'Risk Reduction',     sub:'Fraud blocked · <200ms detect',  x:510,  y:792, grad:['#450A0A','#7F1D1D'], stroke:'#FCA5A5', w:185},
+  {id:'out3',    label:'Ops Efficiency',     sub:'30TB/night batch · 50 reports',  x:810,  y:792, grad:['#14532D','#15803D'], stroke:'#4ADE80', w:182},
+  {id:'out4',    label:'Data Intelligence',  sub:'Real-time insights · Self-serve', x:1110, y:792, grad:['#3B0764','#6D28D9'], stroke:'#C084FC', w:185},
+  {id:'out5',    label:'Platform Scale',     sub:'1M+ users · Global · Cloud-native',x:1390,y:792, grad:['#451A03','#B45309'], stroke:'#FCD34D', w:185},
+];
+
+const EDGES = [
+  {from:'web_ch',  to:'vs1',    color:'#60A5FA', dur:2.0, begin:0.0},
+  {from:'api_ch',  to:'vs1',    color:'#93C5FD', dur:2.0, begin:0.5, path:'M 470,112 C 470,158 160,158 160,178'},
+  {from:'int_ch',  to:'vs2',    color:'#60A5FA', dur:2.5, begin:0.3, path:'M 750,112 C 750,158 450,158 450,178'},
+  {from:'ops_ch',  to:'vs4',    color:'#94A3B8', dur:2.0, begin:0.8, path:'M 1030,112 C 1030,158 1030,158 1030,178'},
+  {from:'exec_ch', to:'vs5',    color:'#F472B6', dur:2.5, begin:1.2, path:'M 1310,112 C 1310,158 1320,158 1320,178'},
+  {from:'vs1',     to:'vs2',    color:'#FBBF24', dur:2.0, begin:0.0},
+  {from:'vs2',     to:'vs3',    color:'#F59E0B', dur:2.0, begin:0.0},
+  {from:'vs3',     to:'vs4',    color:'#FBBF24', dur:2.0, begin:0.0},
+  {from:'vs4',     to:'vs5',    color:'#2DD4BF', dur:2.0, begin:0.0},
+  {from:'vs1',     to:'cap_ci', color:'#FB923C', dur:2.0, begin:0.3, path:'M 160,234 C 160,280 200,280 200,300'},
+  {from:'vs2',     to:'cap_pa', color:'#FCD34D', dur:2.0, begin:0.6, path:'M 450,234 C 450,280 530,280 530,300'},
+  {from:'vs3',     to:'cap_rm', color:'#FCA5A5', dur:2.0, begin:0.9, path:'M 740,234 C 740,280 860,280 860,300'},
+  {from:'vs4',     to:'cap_oo', color:'#4ADE80', dur:2.0, begin:1.2, path:'M 1030,234 C 1030,280 1190,280 1190,300'},
+  {from:'cap_ci',  to:'claude', color:'#C084FC', dur:2.0, begin:0.0},
+  {from:'cap_pa',  to:'agents', color:'#A78BFA', dur:2.0, begin:0.5},
+  {from:'cap_rm',  to:'predict',color:'#C084FC', dur:2.0, begin:1.0},
+  {from:'cap_oo',  to:'rag',    color:'#38BDF8', dur:2.0, begin:0.3},
+  {from:'claude',  to:'agents', color:'#A78BFA', dur:2.0, begin:0.0, path:'M 293,450 C 380,437 440,437 447,450'},
+  {from:'agents',  to:'predict',color:'#C084FC', dur:2.0, begin:0.5, path:'M 623,450 C 710,437 770,437 778,450'},
+  {from:'predict', to:'rag',    color:'#38BDF8', dur:2.0, begin:1.0, path:'M 950,450 C 1040,437 1100,437 1108,450'},
+  {from:'claude',  to:'delta',  color:'#4ADE80', dur:2.0, begin:0.0},
+  {from:'agents',  to:'fstore', color:'#34D399', dur:2.0, begin:0.5},
+  {from:'predict', to:'mlflow', color:'#34D399', dur:2.0, begin:1.0},
+  {from:'rag',     to:'kafka',  color:'#FCD34D', dur:2.0, begin:0.3},
+  {from:'delta',   to:'claude', color:'#4ADE80', dur:3.0, begin:1.5, path:'M 200,544 C 200,500 200,480 200,478', dashed:true, dots:1},
+  {from:'fstore',  to:'agents', color:'#34D399', dur:3.0, begin:2.0, path:'M 530,544 C 530,500 530,480 530,478', dashed:true, dots:1},
+  {from:'mlflow',  to:'predict',color:'#34D399', dur:3.0, begin:2.5, path:'M 860,544 C 860,500 860,480 860,478', dashed:true, dots:1},
+  {from:'delta',   to:'kpi3',   color:'#4ADE80', dur:2.5, begin:0.0, path:'M 200,600 C 200,640 615,640 615,657', dashed:true, dots:1},
+  {from:'kafka',   to:'kpi1',   color:'#38BDF8', dur:2.5, begin:0.5, path:'M 1190,600 C 1190,640 175,640 175,657', dashed:true, dots:1},
+  {from:'kpi1',    to:'out1',   color:'#2DD4BF', dur:2.0, begin:0.0, path:'M 175,719 C 175,755 210,755 210,766'},
+  {from:'kpi2',    to:'out2',   color:'#FCA5A5', dur:2.0, begin:0.3, path:'M 395,719 C 395,755 510,755 510,766'},
+  {from:'kpi3',    to:'out3',   color:'#4ADE80', dur:2.0, begin:0.6, path:'M 615,719 C 615,755 810,755 810,766'},
+  {from:'kpi4',    to:'out3',   color:'#FACC15', dur:2.0, begin:0.9, path:'M 835,719 C 835,755 890,755 890,766'},
+  {from:'kpi5',    to:'out4',   color:'#C084FC', dur:2.0, begin:1.2, path:'M 1055,719 C 1055,755 1110,755 1110,766'},
+  {from:'kpi6',    to:'out5',   color:'#FCD34D', dur:2.0, begin:1.5, path:'M 1275,719 C 1275,755 1390,755 1390,766'},
+  {from:'vs5',     to:'out1',   color:'#2DD4BF', dur:3.5, begin:0.5, path:'M 1320,234 C 1450,340 1450,780 210,818', dots:1},
+];
+
+const NODE_DETAILS = {
+  web_ch:{role:'Business Channel — Web & Mobile',purpose:'Primary customer-facing touchpoints delivering the AI Factory\'s intelligence directly to end users. React PWA provides consistent cross-platform UX; WebSocket connections enable streaming AI responses that feel instant rather than transactional. Push notifications re-engage users with personalized AI-generated content. Conversion rate and session depth are the primary success metrics.',tech:['React 18 / Next.js (PWA)','WebSocket streaming responses','Push notifications (FCM/APNs)','OAuth2 PKCE authentication'],sla:[{val:'>95%',lbl:'CDN cache hit rate'},{val:'<50ms',lbl:'First contentful paint'}],pattern:'Channel-agnostic value delivery: the AI Factory is unaware of whether results are consumed via web, mobile, or API. Output schema normalizes across channels; each channel renders optimally.',risk:'Channel-specific experience divergence — mitigated by shared design system and component library; AI response schema designed to be channel-neutral with rendering hints for each channel type.'},
+  api_ch:{role:'Business Channel — Partner API Integration',purpose:'B2B integration layer enabling partners to embed AI Factory capabilities in their own products via REST/GraphQL APIs. Webhook subscriptions deliver asynchronous AI results to partner systems without polling. Partner-specific rate limits and SLA tiers governed by commercial agreements.',tech:['REST API + GraphQL (Apollo Federation)','Webhook subscriptions (async delivery)','API key + OAuth2 client credentials','Partner developer portal (Stoplight)'],sla:[{val:'99.9%',lbl:'Partner API uptime SLA'},{val:'Version-stable',lbl:'12-month backward compat.'}],pattern:'API-first design: all AI capabilities exposed via versioned APIs before any internal UI is built. Partners consume the same APIs as internal teams — no special integration paths.',risk:'API versioning breaking partner integrations — mitigated by semantic versioning; breaking changes require 6-month deprecation period; automated partner impact assessment before version removal.'},
+  int_ch:{role:'Business Channel — Internal Systems',purpose:'Internal system integrations connect the AI Factory to ERP, CRM, and BI platforms. Data feeds provide continuous context for AI decision-making: inventory levels, customer account status, pricing rules. Bidirectional — AI decisions flow back to update operational systems (e.g., fraud flag in CRM, recommendation in e-commerce engine).',tech:['ERP connector (SAP/Oracle APIs)','CRM integration (Salesforce)','BI data feeds (Databricks → Power BI)','Event-driven state updates (Kafka)'],sla:[{val:'Real-time',lbl:'Critical system sync'},{val:'<15 min',lbl:'Batch system update cadence'}],pattern:'Event-driven integration: internal system changes emit events to Kafka; AI Factory subscribes to relevant topics. Eliminates polling; reduces coupling between systems.',risk:'ERP system downtime blocking AI decisions — mitigated by graceful degradation using last-known-good data with staleness flag; AI models trained to produce reasonable outputs without real-time inventory data.'},
+  ops_ch:{role:'Business Channel — Operations Automation',purpose:'Batch jobs and scheduled tasks that trigger AI workflows automatically: nightly customer churn scoring, weekly personalization model refresh, daily fraud pattern updates. Kubernetes CronJobs trigger orchestrator workflows on schedule. Results delivered to ops dashboards and alert systems.',tech:['Kubernetes CronJobs','Databricks Workflows (DAG scheduling)','PagerDuty alert integration','Ops runbook automation'],sla:[{val:'Complete by 6AM',lbl:'Daily batch SLA'},{val:'99%',lbl:'Scheduled job success rate'}],pattern:'Schedule-as-code: all scheduled workflows defined in version-controlled YAML. Job dependencies tracked; downstream jobs wait for upstream completion. Failed jobs auto-retry 3x before alerting.',risk:'Batch job overrun consuming resources needed by interactive workloads — mitigated by dedicated batch compute pools; resource quotas prevent batch jobs from starving real-time services.'},
+  exec_ch:{role:'Business Channel — Executive Business Intelligence',purpose:'C-suite and senior leadership dashboards delivering strategic AI Factory KPIs: revenue attribution, cost efficiency, model performance trends, and capability utilization. Designed for 30-second insight: key numbers prominent, drill-down available but not required. Alerts notify executives of anomalies before they reach materiality.',tech:['Grafana (operational)','Databricks SQL (business KPIs)','Executive email digests (daily/weekly)','PagerDuty escalation (P0 incidents)'],sla:[{val:'Daily refresh',lbl:'KPI update cadence'},{val:'<2s',lbl:'Dashboard load time'}],pattern:'Layered insight: top layer shows 5 key business metrics; click to drill into capability breakdown; click again for technical root cause. Executives see business impact; engineers see system health.',risk:'Dashboard showing lagged data during pipeline delays — mitigated by freshness timestamp on every metric; stale data visually flagged (yellow/red age indicator); auto-alert when KPI staleness exceeds threshold.'},
+  vs1:{role:'Value Stream Stage 1 — Customer Request',purpose:'The entry point of business value creation. Every customer interaction — purchase decision, fraud inquiry, content recommendation, operational report — starts as a request that the AI Factory transforms into intelligent action. The request stage is channel-agnostic: web, API, batch, or automated trigger all normalize to the same internal request envelope.',tech:['Channel normalization layer','Request deduplication (idempotency keys)','Priority classification (business rules)','SLA tier assignment'],sla:[{val:'Any channel',lbl:'Source channel support'},{val:'<10ms',lbl:'Normalization & enqueue latency'}],pattern:'Fan-in normalization: all request sources normalized to canonical internal format before any processing. Channel metadata preserved for downstream personalization without coupling AI logic to channel specifics.',risk:'Request volume spikes overwhelming processing capacity — mitigated by Kafka-backed queue providing backpressure; auto-scaling of processing pods triggered by queue depth; priority lanes protect high-value requests.'},
+  vs2:{role:'Value Stream Stage 2 — AI Intelligence',purpose:'Claude Orchestrator analyzes the request and generates a DAG execution plan. This is where human-like reasoning transforms a business request into a concrete sequence of data queries, model invocations, and decision operations. The quality of planning directly determines the quality of the final business outcome.',tech:['Claude claude-opus-4 (planning)','DAG generation + validation','Historical plan similarity cache','Tool capability matching'],sla:[{val:'<200ms',lbl:'Plan generation P50'},{val:'>95%',lbl:'First-attempt plan success rate'}],pattern:'ReAct (Reason + Act): Claude reasons about business context, generates hypotheses, plans verification steps, then commits to an execution plan. Plan cached for similar requests to reduce latency and cost.',risk:'Poor plan quality producing irrelevant results — mitigated by plan validation step checking tool availability and resource constraints before execution; human feedback loop improving plan quality over time.'},
+  vs3:{role:'Value Stream Stage 3 — Smart Decision',purpose:'Multi-agent execution of the plan produces a synthesized decision. Specialist agents contribute domain expertise: data analysis, model inference, business rule application. The Coordinator agent synthesizes conflicting agent outputs into a coherent, justified decision with full traceability back to input data.',tech:['Multi-agent parallel execution','Evidence-based decision synthesis','Business rule policy engine (OPA)','Decision audit trail (immutable log)'],sla:[{val:'<5s',lbl:'Multi-agent workflow P99'},{val:'>98%',lbl:'Decision confidence rate'}],pattern:'Collective intelligence: no single agent decides; multiple specialist agents contribute evidence. Final decision requires majority of agents to agree, or Claude escalates to human review for low-confidence cases.',risk:'Agent disagreement causing decision paralysis — mitigated by Coordinator using Claude to reason about conflicts; tie-breaking rules for common conflict patterns; human-in-the-loop escalation for genuinely ambiguous cases.'},
+  vs4:{role:'Value Stream Stage 4 — Automated Action',purpose:'Approved decisions translated into concrete business actions: recommendation served to UI, fraud alert sent to CRM, batch report generated, inventory reorder triggered. Actions are reversible where possible; irreversible actions require higher confidence threshold. Every action logged with full decision lineage for audit.',tech:['Action execution engine','Reversibility classification','Confidence threshold enforcement','Immutable action audit log (Kafka)'],sla:[{val:'<100ms',lbl:'Action execution P99'},{val:'100%',lbl:'Action audit coverage'}],pattern:'Command pattern: every action is an encapsulated, replayable command with rollback capability. Irreversible actions (financial, compliance) require >99% confidence; automated escalation for borderline decisions.',risk:'Incorrect automated actions at scale — mitigated by confidence thresholds, reversibility preference, human escalation queues, and real-time anomaly detection on action distribution to catch systematic errors.'},
+  vs5:{role:'Value Stream Stage 5 — Business Outcome',purpose:'Measured, attributable business value delivered to the organization. Outcomes tracked across four dimensions: revenue impact (incremental lift), risk reduction (fraud/compliance value), operational efficiency (cost savings), and strategic capability (competitive differentiation). Closed-loop measurement feeds back to continuously improve the AI Factory.',tech:['A/B testing framework (GrowthBook)','Revenue attribution model (MTA)','Cost accounting (Databricks tagging)','Closed-loop feedback to model training'],sla:[{val:'Measured',lbl:'All outcomes attributed'},{val:'Weekly',lbl:'ROI report cadence'}],pattern:'Closed-loop learning: every outcome measured feeds back as ground truth for model retraining. Business outcomes are the north star; all technical decisions evaluated against their impact on business outcomes.',risk:'Attribution model incorrectly crediting AI Factory for outcomes driven by other factors — mitigated by holdout groups (5% no-AI control group) providing clean incrementality measurement.'},
+  cap_ci:{role:'Business Capability — Customer Intelligence',purpose:'Transforms customer behavioral data into personalized experiences at scale. Recommendation engine generates product/content recommendations with +12% CTR lift over static rules. Customer lifetime value (LTV) scoring enables differential investment in high-value segments. Churn prediction (86% AUC) enables proactive retention campaigns 30 days before churn.',tech:['LightGBM churn model (86% AUC)','Collaborative filtering (matrix factorization)','LTV scoring (regression model)','Segment-level A/B testing'],sla:[{val:'+12% CTR',lbl:'Recommendation lift (proven)'},{val:'30 days',lbl:'Churn prediction lead time'}],pattern:'Test-and-learn cadence: every personalization hypothesis run as an A/B experiment. Results feed back to model training within 7 days. No permanent "champion" — continuous challenger models compete.',risk:'Recommendation filter bubble reducing customer discovery — mitigated by diversity injection (30% serendipitous recommendations); long-tail promotion ensures catalog breadth is represented in recommendations.'},
+  cap_pa:{role:'Business Capability — Product Analytics',purpose:'AI-powered product intelligence enabling data-driven decisions at speed. Trend analysis identifies emerging patterns 2-3 weeks before they appear in traditional BI reports. A/B testing framework runs 50+ simultaneous experiments with automated statistical analysis. Demand forecasting (MAPE <8%) optimizes inventory and production planning.',tech:['Trend detection (Prophet + anomaly models)','A/B testing (GrowthBook)','Demand forecasting (MAPE <8%)','NLP-powered user feedback analysis'],sla:[{val:'2-3 weeks',lbl:'Trend lead time vs traditional BI'},{val:'<8% MAPE',lbl:'Demand forecast accuracy'}],pattern:'Insight-to-action pipeline: detected trends automatically generate hypothesis experiments. Significant A/B results automatically surface to relevant stakeholders with statistical context and recommended action.',risk:'A/B test contamination from network effects — mitigated by network-aware cluster randomization (CUPED variance reduction); users in same social/network cluster assigned to same treatment arm.'},
+  cap_rm:{role:'Business Capability — Risk Management',purpose:'Real-time fraud detection, compliance monitoring, and operational risk quantification. Fraud model achieves <200ms detection with 94% precision (0.3% false positive rate). Compliance monitoring flags regulatory violations before they escalate to material events. Operational risk scoring quantifies exposure across counterparty, market, and credit dimensions.',tech:['Real-time fraud scoring (<200ms)','Compliance rule engine (OPA)','Operational risk models (Monte Carlo)','Explainable AI (SHAP) for audit trail'],sla:[{val:'<200ms',lbl:'Fraud detection latency'},{val:'0.3%',lbl:'False positive rate'}],pattern:'Defense-in-depth: multiple independent models score each transaction. Ensemble agreement required for block decisions; any model can flag for human review. No single model can block without corroboration.',risk:'Fraud model adversarial adaptation as fraudsters learn patterns — mitigated by model versioning and rotation (new models without published release dates); behavioral features harder to spoof than static transaction features.'},
+  cap_oo:{role:'Business Capability — Operations Optimization',purpose:'AI-driven automation of operational workflows: batch processing (30 TB/night in <30 minutes), report generation (50 standard reports auto-generated and distributed), and intelligent scheduling (job dependencies auto-resolved). Cost optimization engine identifies idle resource windows, saving ~$2K/month vs fixed-schedule approach.',tech:['Databricks Workflows (intelligent scheduling)','Cost optimization (spot instance bidding)','Report generation (templated + AI narrative)','SLA-aware job prioritization'],sla:[{val:'30 TB/night',lbl:'Batch processing capacity'},{val:'<30 min',lbl:'Nightly batch completion'}],pattern:'Just-in-time resource provisioning: jobs submitted to Databricks Workflows; cluster auto-provisioned for each job stage and deprovisioned on completion. No idle clusters; 60% cost reduction vs persistent clusters.',risk:'Critical batch job missing SLA due to upstream dependency delay — mitigated by priority lanes for SLA-critical jobs; partial results published at intermediate milestones; alerting at 70% of SLA window.'},
+  claude:{role:'AI Engine — Claude Orchestrator',purpose:'The cognitive core of the AI Factory. Claude claude-opus-4 reasons about business context, generates multi-step execution plans as directed acyclic graphs (DAGs), invokes specialized tools, and synthesizes results into coherent business outcomes. Operates as the "chief of staff" coordinating all AI capabilities toward the business objective.',tech:['Claude claude-opus-4 (planning + synthesis)','Structured JSON DAG output','Tool use (12 defined tools)','ReAct reasoning pattern'],sla:[{val:'<2s',lbl:'Complex plan generation P99'},{val:'>95%',lbl:'Plan success rate (no retry)'}],pattern:'ReAct (Reason + Act): Claude reasons step-by-step, generating an internal monologue before committing to any action. Reasoning trace logged for explainability; business decisions fully auditable.',risk:'Claude API latency/availability impacting business SLA — mitigated by simplified fallback plan generation (rules-based) when Claude API degrades; circuit breaker with 30s half-open window; graceful degradation over hard failure.'},
+  agents:{role:'AI Engine — Multi-Agent System',purpose:'Specialized agents execute different aspects of the business plan in parallel: Data Analyst queries operational data, ML Engineer runs model inference and explainability, Decision Maker applies business rules and executes approved actions. Parallelism reduces end-to-end latency by 60% vs sequential execution.',tech:['3 specialist agents (parallel execution)','Claude claude-opus-4 (agent reasoning)','Shared workspace (Redis state)','Coordinator synthesis (Claude)'],sla:[{val:'60%',lbl:'Latency reduction vs sequential'},{val:'<5s',lbl:'3-agent workflow P99'}],pattern:'Specialization + coordination: each agent is a domain expert with constrained tool access. Coordinator aggregates outputs; no single agent sees full system state. Reduces hallucination by constraining each agent\'s context.',risk:'Agent coordination overhead negating parallelism benefits for simple requests — mitigated by request classifier routing simple requests directly to single-agent path, bypassing multi-agent overhead.'},
+  predict:{role:'AI Engine — ML Prediction Engine',purpose:'Ensemble of production ML models delivering predictions across business domains: churn probability, product relevance scores, fraud likelihood, price elasticity. LightGBM and XGBoost models trained on Feature Store data. SHAP explainability integrated for regulatory compliance and business interpretability.',tech:['LightGBM + XGBoost ensemble','SHAP explainability (real-time)','MLflow model serving','Champion/Challenger (95/5 traffic split)'],sla:[{val:'<200ms',lbl:'Single prediction P99'},{val:'>0.85 AUC',lbl:'Minimum production quality bar'}],pattern:'Champion/Challenger: production model serves 95% traffic; challenger model serves 5%. After 7 days with statistically significant lift (p<0.05), challenger auto-promotes. Continuous model improvement without risk.',risk:'Model performance silent degradation after distribution shift — mitigated by daily drift monitoring (PSI > 0.2 triggers retraining); weekly holdout evaluation against recent ground truth labels.'},
+  rag:{role:'AI Engine — Search & Retrieval-Augmented Generation',purpose:'Semantic search and RAG provides Claude with accurate, up-to-date business context retrieved from the knowledge base, product catalog, and policy documents. Hybrid retrieval (vector + BM25) achieves >90% precision@10. Retrieved context grounded responses in facts, reducing hallucination rate by 78%.',tech:['FAISS vector search (semantic)','Elasticsearch BM25 (lexical)','Cross-encoder reranking','Reciprocal rank fusion'],sla:[{val:'<100ms',lbl:'Hybrid search P99'},{val:'>90%',lbl:'Precision@10 (relevance)'}],pattern:'Retrieve-then-read: retrieval separates factual grounding from generation. Claude reads retrieved chunks with clear boundary markers between retrieved facts and its own reasoning.',risk:'RAG context staleness causing outdated information in responses — mitigated by document freshness metadata; Claude instructed to flag when retrieved context appears outdated; nightly incremental index rebuild.'},
+  delta:{role:'Data Platform — Delta Lake (30 TB)',purpose:'Foundation of the data platform. Delta Lake provides ACID transactions, time travel (30-day history), schema evolution, and unified batch + streaming processing on 30 TB of business data. Three-tier medallion architecture: Bronze (raw), Silver (validated), Gold (business aggregates). The single source of truth for all AI model training.',tech:['Delta Lake 3.x (ACID + time travel)','Medallion architecture (Bronze/Silver/Gold)','Z-ORDER + liquid clustering','30 TB at <$200/month (object storage)'],sla:[{val:'30 TB',lbl:'Total managed data volume'},{val:'30 days',lbl:'Time travel history depth'}],pattern:'Medallion architecture: data quality increases at each tier. Bronze = raw (immutable); Silver = validated (correctable); Gold = business-aligned (governed). Data never deleted from Bronze; corrections applied in Silver via MERGE.',risk:'Storage cost growing with data volume — mitigated by automated Bronze archival (S3 Glacier after 1 year, 10x cheaper); columnar compression (Parquet) provides 5-8x compression vs row-based storage.'},
+  fstore:{role:'Data Platform — Feature Store',purpose:'Eliminates the #1 cause of ML failures: training-serving skew. Feature Store ensures identical feature computation for both model training (offline batch) and production inference (online real-time). Online serving via DynamoDB delivers <10ms P99. Manages 200+ business features across 15 feature groups.',tech:['Databricks Feature Store','DynamoDB online store (<10ms P99)','Delta Lake offline store','Point-in-time joins for training'],sla:[{val:'<10ms',lbl:'Online feature lookup P99'},{val:'200+',lbl:'Managed business features'}],pattern:'Single source of truth for features: one feature definition serves both training and inference. Feature versioning with backward-compatible contracts prevents downstream model breakage on feature updates.',risk:'Feature drift causing silent model degradation — mitigated by statistical drift monitoring (PSI per feature group); feature freshness SLA with automated alerts; model confidence tied to feature freshness.'},
+  mlflow:{role:'Data Platform — MLflow Model Registry',purpose:'The model governance and lifecycle management system. Tracks every experiment: training data version, feature set used, hyperparameters, and evaluation metrics. Manages promotion from development through staging to production with automated validation gates. Required for financial services SR 11-7 model risk management compliance.',tech:['MLflow 2.x experiment tracking','Champion/Challenger promotion flow','Automated model cards (fairness + accuracy)','Delta Lake artifact storage'],sla:[{val:'0-downtime',lbl:'Model deployment strategy'},{val:'Auto-rollback',lbl:'On >5% accuracy degradation'}],pattern:'GitOps model promotion: model PR → shadow scoring → 95% statistical significance → canary 5% traffic → full production. Full lineage from training data to prediction auditable in one query.',risk:'Model version confusion across teams — mitigated by MLflow as single model registry; model alias system (production/staging/development) prevents ambiguity; deployment automation enforces registry-only model sources.'},
+  kafka:{role:'Data Platform — Kafka Streaming',purpose:'Real-time event backbone connecting all business systems. 100K+ events/second throughput with sub-10ms latency. Provides the streaming data that powers real-time fraud detection, live recommendations, and operational monitoring. Decouples event producers from consumers — new consumers can subscribe without impacting producers.',tech:['Apache Kafka (Confluent Cloud)','Schema Registry (Avro contracts)','Multi-AZ (3 brokers, RF=3)','KEDA autoscaling on consumer lag'],sla:[{val:'100K+',lbl:'Events/second throughput'},{val:'<10ms',lbl:'Event delivery P99'}],pattern:'Event-driven architecture: business events emitted to Kafka enable any system to react to business changes without point-to-point integration. New capabilities subscribe to existing events without coordination with producers.',risk:'Kafka consumer lag accumulation during traffic spikes — mitigated by KEDA autoscaling (consumer pods scale on lag metric); priority consumer groups for time-sensitive fraud events; dead-letter topics for failed processing.'},
+  kpi1:{role:'KPI — API Response Latency',purpose:'End-to-end API response time from request receipt to response delivery, measured at P99. <500ms P99 ensures that AI augmentation does not degrade user experience versus static systems. Real-time Grafana dashboards alert at 400ms P99 (80% of budget) to provide 20% headroom before SLA breach.',tech:['Prometheus + Grafana (monitoring)','OpenTelemetry distributed tracing','P99 percentile tracking','Alert at 400ms (80% budget)'],sla:[{val:'<500ms',lbl:'P99 target'},{val:'<200ms',lbl:'P50 typical'}],pattern:'Latency budget allocation: each system layer allocated a budget (API GW 10ms, Planning 200ms, Execution 200ms, Delivery 10ms). Budget tracking enables precise optimization investment.',risk:'P99 breach during peak traffic — mitigated by latency budget monitoring per layer; auto-scaling triggered 5 minutes before predicted peak (time-series forecast of traffic patterns).'},
+  kpi2:{role:'KPI — Peak Throughput',purpose:'Maximum sustainable request throughput measured at 5,000 req/s. Achieved through 3-20 pod auto-scaling, Kafka-buffered request queuing, and parallel agent execution. Load tested monthly to verify throughput headroom. Kubernetes HPA scale-out triggered at 70% CPU, scale-in at 30%.',tech:['Kubernetes HPA (CPU + RPS triggers)','Kafka request queue (burst absorption)','Load testing (k6, monthly)','Auto-scale 3-20 pods'],sla:[{val:'5,000 req/s',lbl:'Sustained peak throughput'},{val:'3-20 pods',lbl:'Auto-scale range'}],pattern:'Elastic capacity: Kubernetes HPA scales pods based on CPU utilization and request queue depth. Kafka absorbs burst traffic above auto-scale response time (60s). Load tests validate capacity before peak business periods.',risk:'Auto-scale response too slow for sudden traffic spike — mitigated by predictive scaling (cron-based pre-scale before known peak times) and burst capacity via over-provisioned pod upper limit (20 pods).'},
+  kpi3:{role:'KPI — System Uptime SLA',purpose:'99.9% uptime (8.7 hours/year maximum downtime) achieved through multi-AZ deployment, zero-downtime rolling updates, and automated failover. Downtime budget tracked monthly. RTO (Recovery Time Objective) <15 minutes; RPO (Recovery Point Objective) <1 minute for primary region failure.',tech:['Multi-AZ Kubernetes (3 availability zones)','Rolling update (zero-downtime deploy)','Circuit breakers (prevent cascade failure)','Automated failover (AWS Route53 health checks)'],sla:[{val:'99.9%',lbl:'Uptime SLA (8.7h/year budget)'},{val:'<15 min',lbl:'RTO on region failure'}],pattern:'Defense-in-depth availability: multi-AZ eliminates single-AZ failure risk; circuit breakers prevent cascade failure from degraded dependencies; regular chaos engineering (monthly) validates failover procedures.',risk:'Coordinated multi-AZ failure (region-wide event) — mitigated by US-West DR standby cluster; Route53 health-check-based automatic failover; DR drill quarterly to validate RTO/RPO targets.'},
+  kpi4:{role:'KPI — Infrastructure Cost',purpose:'~$5K/month production infrastructure cost covering Kubernetes compute, Databricks workspace, Kafka, Redis, and storage. Represents 3-5% of AI-generated revenue impact, well within industry benchmark of 15-20%. Cost-per-prediction <$0.001 enables economic viability at scale. Monthly FinOps review tracks cost efficiency.',tech:['Databricks tagging (cost attribution per capability)','Spot/preemptible instances (60% savings on batch)','Auto-scale (scale-to-zero dev environments)','Reserved instances (30% discount on baseline)'],sla:[{val:'~$5K/mo',lbl:'Production infra cost'},{val:'<$0.001',lbl:'Cost per AI prediction'}],pattern:'FinOps culture: every service tagged with cost center; weekly cost anomaly alerts; "cost champion" per team owns their service\'s efficiency. Savings reinvested in new capabilities, not captured as margin.',risk:'Cost growth outpacing business value — mitigated by cost-per-outcome tracking; business case required for any service adding >$500/month; quarterly cost efficiency review against industry benchmarks.'},
+  kpi5:{role:'KPI — Auto-Scaling Range',purpose:'Kubernetes HPA scales the Claude Orchestrator and agent pods between 3 (minimum HA) and 20 (maximum throughput) replicas based on CPU utilization and request queue depth. 3-pod minimum ensures zero single-pod-of-failure risk. 20-pod maximum tested and validated in load tests at 5,000 req/s.',tech:['Kubernetes HPA (Horizontal Pod Autoscaler)','Custom metrics (Kafka consumer lag, P99 latency)','KEDA (event-driven autoscaling)','Pod disruption budgets (min 2 available)'],sla:[{val:'3 pods min',lbl:'Always-on HA baseline'},{val:'20 pods max',lbl:'Peak capacity validated'}],pattern:'Reactive + predictive scaling: HPA reacts to current load; KEDA predicts from Kafka lag; time-based scaling pre-provisions for known peak times (e.g., end-of-month batch). Scale-in is conservative (5-min stabilization window).',risk:'Thundering herd on mass pod restart — mitigated by staggered restart (maxUnavailable=1, maxSurge=1 in RollingUpdate); exponential backoff for pod reconnection to upstream services.'},
+  kpi6:{role:'KPI — Disaster Recovery RPO',purpose:'Recovery Point Objective of <1 minute means that in a catastrophic failure scenario, at most 1 minute of business data is lost. Achieved via synchronous write to primary DB + async replication to DR region. RTO <15 minutes via automated Route53 failover to US-West standby cluster.',tech:['PostgreSQL async cross-region replication','Delta Lake S3 cross-region sync','Route53 health check failover','Quarterly DR drill'],sla:[{val:'<1 min',lbl:'RPO (max data loss)'},{val:'<15 min',lbl:'RTO (time to recover)'}],pattern:'Pilot light DR: US-West cluster runs at minimal capacity (1-2 pods), instantly scalable. Database replica in near real-time. Failover procedure fully automated; validated quarterly with real traffic cut-over test.',risk:'DR failover causing more disruption than original failure — mitigated by automated failover with manual approval gate for non-obvious failures; quarterly drills ensure team familiarity; runbook for manual override if automation fails.'},
+  out1:{role:'Business Outcome — Revenue Growth',purpose:'Measurable, attributable revenue growth driven by AI Factory capabilities. Recommendation engine delivers +12% CTR lift (A/B proven over 90 days, n=2M users). Personalization reduces checkout abandonment by 8%. LTV-based customer segmentation enables +22% marketing efficiency. Combined: estimated $3.5M annual incremental revenue impact at current scale.',tech:['Incrementality measurement (holdout groups)','Multi-touch attribution (MTA model)','Revenue impact reporting (weekly)','Cohort analysis (LTV improvement)'],sla:[{val:'+12% CTR',lbl:'Recommendation lift (proven)'},{val:'$3.5M/yr',lbl:'Estimated revenue impact'}],pattern:'Continuous compounding: each capability improvement compounds with others. Better recommendations → higher engagement → more behavioral data → better models → better recommendations. Flywheel effect.',risk:'Revenue attribution inflation from correlation masking causation — mitigated by holdout groups providing clean incrementality measurement; A/B tests sized for minimum detectable effect; conservative attribution accounting.'},
+  out2:{role:'Business Outcome — Risk Reduction',purpose:'Measurable fraud prevention and compliance risk mitigation. Fraud model blocks $2.1M/year in fraudulent transactions (industry-standard chargeback rate reduction from 0.8% to 0.2%). Compliance monitoring prevents regulatory fines by flagging policy violations before they materialize. Operational risk models quantify exposure and trigger hedging actions.',tech:['Fraud model ROI tracking (savings vs false positive cost)','Compliance violation early warning system','Operational risk quantification (VaR)','SHAP explainability for regulatory audit'],sla:[{val:'$2.1M/yr',lbl:'Fraud loss prevention'},{val:'0.2%',lbl:'Chargeback rate (vs 0.8% baseline)'}],pattern:'Risk-adjusted ROI: fraud model value measured as (prevented fraud loss) - (false positive cost to legitimate customers). Threshold tuned to maximize risk-adjusted value, not raw precision.',risk:'Fraud model adversarial adaptation — mitigated by model rotation (new models without published architecture); behavioral feature emphasis (harder to spoof than transaction features); continuous model retraining on emerging fraud patterns.'},
+  out3:{role:'Business Outcome — Operational Efficiency',purpose:'Quantifiable cost savings and throughput improvements in operations. 30 TB batch processed nightly in <30 minutes (vs 4 hours manual); 50 standard reports auto-generated and distributed; human analyst time redirected from data preparation to strategic interpretation. Estimated $1.2M/year in operational cost savings.',tech:['Batch automation ROI tracking','Human-hours-replaced measurement','Report quality feedback loop','Process time benchmarking (before/after)'],sla:[{val:'$1.2M/yr',lbl:'Estimated ops cost savings'},{val:'50 reports',lbl:'Auto-generated nightly'}],pattern:'Automate-then-analyze: automate repetitive analytical work, freeing analyst capacity for higher-value strategic work. Measure analyst time savings rigorously; ensure freed capacity is reinvested in value creation.',risk:'Over-automation eliminating necessary human oversight — mitigated by human-in-the-loop requirements for decisions above materiality thresholds; analyst review of AI outputs monthly to validate quality.'},
+  out4:{role:'Business Outcome — Data Intelligence',purpose:'Organizational capability to act on real-time data-driven insights. Self-serve analytics enables business teams to answer their own questions without data engineering bottlenecks. Real-time dashboards compress insight-to-action time from days to minutes. Data literacy programs ensure business teams can interpret and act on AI-generated insights.',tech:['Self-serve BI (Databricks SQL)','Natural language query (AI-powered)','Insight notification system (proactive alerts)','Data literacy training program'],sla:[{val:'Minutes',lbl:'Insight-to-action time'},{val:'Self-serve',lbl:'Analytics access model'}],pattern:'Data democratization with guardrails: every business user has self-serve access to Gold layer data; DLP and row-level security prevent PII exposure; query guardrails prevent expensive accidental queries.',risk:'Self-serve analytics producing incorrect business decisions from misinterpreted data — mitigated by data dictionary (business-friendly column descriptions), automated sanity check alerts for anomalous query results, mandatory BI training for self-serve access.'},
+  out5:{role:'Business Outcome — Platform Scale',purpose:'Architectural capability to grow to 1M+ concurrent users and global deployment without re-architecture. Kubernetes multi-region design, CDN edge caching, and cloud-native services eliminate traditional scaling bottlenecks. Platform can expand to new geographic markets by provisioning a new Kubernetes cluster in target region — operational in hours.',tech:['Global CDN (CloudFront · 95% edge hit rate)','Multi-region Kubernetes (active-active capable)','Cloud-agnostic design (AWS/GCP/Azure)','Horizontal scale (stateless services)'],sla:[{val:'1M+',lbl:'Concurrent user capacity'},{val:'Hours',lbl:'New market deployment time'}],pattern:'Cloud-native horizontal scale: every service is stateless and horizontally scalable. State externalized to managed services (Redis, PostgreSQL, Kafka). No vertical scaling dead-ends; only horizontal expansion.',risk:'Technical debt accumulation slowing scale velocity — mitigated by Architecture Decision Records (ADRs) documenting design choices and trade-offs; quarterly tech debt review with business impact quantification.'},
+};
+
+let _sel=null, eg, ng, dg;
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('diagram');
+function mk(t,a={}){const e=document.createElementNS(NS,t);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+
+function init(){
+  const defs=svg.querySelector('defs');
+  for(const n of NODES){
+    const g=mk('linearGradient',{id:'grad-'+n.id,x1:'0%',y1:'0%',x2:'100%',y2:'100%'});
+    [[0,n.grad[0]],[100,n.grad[1]]].forEach(([o,c])=>{const s=mk('stop',{offset:o+'%','stop-color':c});g.appendChild(s);});
+    defs.appendChild(g);
+  }
+  for(const s of SECTIONS)drawStrip(s);
+  eg=mk('g');ng=mk('g');dg=mk('g');
+  svg.appendChild(eg);svg.appendChild(ng);svg.appendChild(dg);
+  EDGES.forEach(e=>drawEdge(e));NODES.forEach(n=>drawNode(n));EDGES.forEach(e=>addDots(e));
+  svg.addEventListener('click',()=>clearSel());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')clearSel();});
+  buildNavPane();
+  document.getElementById('np-search').addEventListener('input',filterNav);
+}
+
+function drawStrip(s){
+  const g=mk('g');
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:s.rowH,fill:'rgba(255,255,255,.01)'}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:1500,height:20,fill:s.strip}));
+  g.appendChild(mk('rect',{x:0,y:s.rowStart,width:5,height:s.rowH,fill:s.bar,opacity:'0.9'}));
+  const t=mk('text',{x:14,y:s.rowStart+14,fill:s.lc,'font-size':'9','font-weight':'700','font-family':'system-ui,sans-serif','letter-spacing':'0.09em'});
+  t.textContent=s.label;g.appendChild(t);
+  g.appendChild(mk('line',{x1:0,y1:s.rowStart+s.rowH,x2:1500,y2:s.rowStart+s.rowH,stroke:'rgba(255,255,255,.04)','stroke-width':'1'}));
+  svg.insertBefore(g,svg.firstChild);
+}
+
+function gn(id){return NODES.find(n=>n.id===id);}
+function ap(n1,n2){const x1=n1.x,y1=n1.y+28,x2=n2.x,y2=n2.y-28,my=(y1+y2)/2;if(Math.abs(x1-x2)<5)return`M ${x1},${y1} L ${x2},${y2}`;return`M ${x1},${y1} C ${x1},${my} ${x2},${my} ${x2},${y2}`;}
+
+function drawEdge(e){
+  const d=e.path||ap(gn(e.from),gn(e.to));e._d=d;
+  const p=mk('path',{d,stroke:e.color,'stroke-width':e.dashed?'1.5':'1.8',fill:'none',opacity:'0.42','marker-end':'url(#arrowhead)'});
+  if(e.dashed)p.setAttribute('stroke-dasharray','6,4');
+  p.setAttribute('data-from',e.from);p.setAttribute('data-to',e.to);
+  p.style.transition='opacity .25s';
+  eg.appendChild(p);
+}
+
+function drawNode(n){
+  const W=n.w||165,H=n.h||54,g=mk('g');
+  g.setAttribute('data-node-id',n.id);
+  g.style.cursor='pointer';g.style.transition='opacity .25s';
+  g.appendChild(mk('rect',{x:n.x-W/2-10,y:n.y-H/2-10,width:W+20,height:H+20,rx:17,fill:'transparent'}));
+  g.appendChild(mk('rect',{x:n.x-W/2-7,y:n.y-H/2-7,width:W+14,height:H+14,rx:16,fill:'none',stroke:n.stroke,'stroke-width':'2.5',opacity:'0'}));
+  g.appendChild(mk('rect',{x:n.x-W/2-4,y:n.y-H/2-4,width:W+8,height:H+8,rx:15,fill:'none',stroke:n.stroke,'stroke-width':'2',opacity:'0.15',filter:'url(#nglow)'}));
+  g.appendChild(mk('rect',{x:n.x-W/2,y:n.y-H/2,width:W,height:H,rx:11,fill:`url(#grad-${n.id})`,stroke:n.stroke,'stroke-width':'1.6',filter:'url(#shadow)'}));
+  const lb=mk('text',{x:n.x,y:n.y-(n.sub?7:5),'text-anchor':'middle',fill:'#FFFFFF','font-size':n.fs||'12.5','font-weight':'700','font-family':'system-ui,sans-serif'});
+  lb.textContent=n.label;g.appendChild(lb);
+  if(n.sub){const sb=mk('text',{x:n.x,y:n.y+10,'text-anchor':'middle',fill:'rgba(255,255,255,.58)','font-size':'9','font-family':'system-ui,sans-serif'});sb.textContent=n.sub;g.appendChild(sb);}
+  g.addEventListener('click',e=>{e.stopPropagation();selectNode(n.id);});
+  ng.appendChild(g);
+}
+
+function addDots(e){
+  const d=e._d,cnt=e.dots||2;
+  for(let i=0;i<cnt;i++){
+    const og=mk('circle',{r:'8',fill:e.color,opacity:'0.18',filter:'url(#glow)'});
+    og.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(og);
+    const c=mk('circle',{r:'4',fill:e.color,opacity:'0.95',filter:'url(#glow)'});
+    c.appendChild(mk('animateMotion',{dur:`${e.dur}s`,begin:`${(e.begin||0)+i*(e.dur/cnt)}s`,repeatCount:'indefinite',path:d,calcMode:'spline',keyTimes:'0;1',keySplines:'0.42 0 0.58 1'}));
+    dg.appendChild(c);
+  }
+}
+
+function selectNode(id){
+  if(_sel===id){clearSel();return;}
+  _sel=id;
+  dg.style.opacity='0.18';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{
+    const nid=g.getAttribute('data-node-id');
+    const isSel=nid===id;
+    const isConn=EDGES.some(e=>(e.from===id&&e.to===nid)||(e.to===id&&e.from===nid));
+    g.style.opacity=isSel?'1':(isConn?'0.85':'0.12');
+    const sr=g.children[1];
+    sr.setAttribute('opacity',isSel?'0.55':'0');
+    if(isSel){const n=NODES.find(n=>n.id===id);if(n)sr.setAttribute('stroke',n.stroke);}
+  });
+  eg.querySelectorAll('[data-from]').forEach(p=>{
+    const isConn=p.getAttribute('data-from')===id||p.getAttribute('data-to')===id;
+    p.style.opacity=isConn?'0.85':'0.04';
+  });
+  showDp(id);
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.toggle('sel',b.getAttribute('data-nav-id')===id));
+  const btn=document.querySelector(`.nnb[data-nav-id="${id}"]`);
+  if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function clearSel(){
+  if(!_sel)return;
+  _sel=null;
+  dg.style.opacity='1';
+  ng.querySelectorAll('[data-node-id]').forEach(g=>{g.style.opacity='1';if(g.children[1])g.children[1].setAttribute('opacity','0');});
+  eg.querySelectorAll('[data-from]').forEach(p=>{p.style.opacity='0.42';});
+  closeDp();
+  document.querySelectorAll('.nnb').forEach(b=>b.classList.remove('sel'));
+}
+
+function showDp(id){
+  const n=NODES.find(n=>n.id===id);
+  const d=NODE_DETAILS[id];
+  if(!n||!d)return;
+  document.getElementById('dp-hero-bg').style.background=`linear-gradient(135deg,${n.grad[0]},${n.grad[1]})`;
+  document.getElementById('dp-role').textContent=d.role;
+  document.getElementById('dp-name').textContent=n.label;
+  document.getElementById('dp-sub').textContent=n.sub||'';
+  const conns=getConns(id);
+  document.getElementById('dp-body').innerHTML=`
+    <div><div class="dp-sl">Purpose & Business Value</div><div class="dp-purpose">${d.purpose}</div></div>
+    <div><div class="dp-sl">Technology Stack</div><div class="dp-chips">${d.tech.map(t=>`<span class="dp-chip">${t}</span>`).join('')}</div></div>
+    <div><div class="dp-sl">Performance / Business KPI</div><div class="dp-grid">${d.sla.map(s=>`<div class="dp-metric"><div class="dp-mv">${s.val}</div><div class="dp-ml">${s.lbl}</div></div>`).join('')}</div></div>
+    <div class="dp-pat"><div class="dp-pat-l">Architectural Pattern</div><div class="dp-pat-v">${d.pattern}</div></div>
+    <div><div class="dp-sl">Connected Components</div><div class="dp-conns">${conns.length?conns.map(c=>`<div class="dp-conn" onclick="event.stopPropagation();selectNode('${c.id}')"><span class="dp-dir ${c.dir}">${c.dir==='in'?'← FROM':'→ TO'}</span><span class="dp-cn">${c.label}</span></div>`).join(''):'<div class="no-conn">No direct connections</div>'}</div></div>
+    <div class="dp-risk"><div class="dp-risk-l">⚠ Risk &amp; Mitigation</div><div class="dp-risk-v">${d.risk}</div></div>`;
+  document.getElementById('dp').classList.add('open');
+}
+
+function getConns(id){
+  const seen=new Set(),r=[];
+  EDGES.forEach(e=>{
+    if(e.from===id){const n=gn(e.to);if(n&&!seen.has('out'+e.to)){seen.add('out'+e.to);r.push({id:e.to,label:n.label,dir:'out'});}}
+    if(e.to===id){const n=gn(e.from);if(n&&!seen.has('in'+e.from)){seen.add('in'+e.from);r.push({id:e.from,label:n.label,dir:'in'});}}
+  });
+  return r;
+}
+
+function closeDp(){document.getElementById('dp').classList.remove('open');}
+function toggleNp(){document.getElementById('np').classList.toggle('open');}
+
+function buildNavPane(){
+  const body=document.getElementById('np-body');
+  SECTIONS.forEach(sec=>{
+    const secNodes=NODES.filter(n=>n.y>=sec.rowStart&&n.y<sec.rowStart+sec.rowH);
+    if(!secNodes.length)return;
+    const wrap=document.createElement('div');
+    const hdr=document.createElement('div');hdr.className='nsh';
+    hdr.innerHTML=`<div class="nsh-bar" style="background:${sec.bar}"></div><span class="nsh-lbl">${sec.label}</span><span class="nsh-chev">▾</span>`;
+    const nodesDiv=document.createElement('div');nodesDiv.className='nsn';
+    hdr.onclick=()=>{hdr.classList.toggle('col');nodesDiv.classList.toggle('hid');};
+    secNodes.forEach(n=>{
+      const d=NODE_DETAILS[n.id]||{};
+      const btn=document.createElement('button');btn.className='nnb';btn.setAttribute('data-nav-id',n.id);
+      btn.innerHTML=`<div class="nn-sw" style="background:linear-gradient(135deg,${n.grad[0]},${n.grad[1]});border-color:${n.stroke}40"></div><div class="nn-info"><div class="nn-name">${n.label}</div><div class="nn-role">${d.role||''}</div></div>`;
+      btn.onclick=()=>selectNode(n.id);
+      nodesDiv.appendChild(btn);
+    });
+    wrap.appendChild(hdr);wrap.appendChild(nodesDiv);body.appendChild(wrap);
+  });
+}
+
+function filterNav(){
+  const q=this.value.toLowerCase();
+  document.querySelectorAll('.nnb').forEach(btn=>{
+    const nm=btn.querySelector('.nn-name').textContent.toLowerCase();
+    const rl=btn.querySelector('.nn-role').textContent.toLowerCase();
+    btn.style.display=(!q||nm.includes(q)||rl.includes(q))?'':'none';
+  });
+}
+
+init();
+</script>
+</body>
+</html>
